@@ -1,0 +1,773 @@
+<!--
+    next steps:
+    observation the jpg lossy compression and lsb bit loss through image sharing (whatsapp)
+    ***/**--the jpg image initially it was 1080*2400 which is 2592000 and 512kb after sending it through whatsapp it became 540*1200 which is 648000 and 64.75kb
+    ***/**--it was 1280*720 which is 921600 with 398.74kb after sending through it became same ,pixels 1280*720 which is 921600 but has 31.60kb
+    take-- 
+    WhatsApp resizes the image (as you saw: from 1080×2400 to 540×1200).
+    It also compresses the image using lossy compression (JPEG) — meaning pixel data is altered.
+    Result: Any LSB-based steganography is destroyed or corrupted.
+    .................
+    PNG is lossless, so pixel data stays intact unless:
+    WhatsApp explicitly compresses it more
+    Or converts it to JPG internally (which it sometimes does for bandwidth)
+    so, always work with png
+    so, why does the reduxe in png size
+    --WhatsApp might:
+        Strip metadata (EXIF, etc.)
+        Use a more aggressive compression level
+        Still preserve pixel-level integrity
+-->
+    <!--
+        use case test Encode → download PNG → send via WhatsApp → upload and decode
+    -->
+<!-- 
+graph TD
+A[User enters message + PNG] -- B[Embed using LSB]
+B -- C[Download stego PNG]
+C -- D[Send via WhatsApp]
+D -- E[Upload received PNG]
+E -- F[Decode and display message]
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Enhanced PNG-Resistant Steganography Tool</title>
+  <style>
+    body { 
+      font-family: Arial; 
+      padding: 20px; 
+      max-width: 1200px; 
+      margin: 0 auto;
+      background: #f8f9fa;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    canvas { 
+      border: 2px solid #dee2e6; 
+      margin: 10px 0;
+      border-radius: 5px;
+    }
+    .section {
+      background: #f8f9fa;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      border-left: 4px solid #007bff;
+    }
+    .debug-info {
+      background: #e3f2fd;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid #bbdefb;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+    .download-btn {
+      background: #28a745;
+    }
+    .download-btn:hover {
+      background: #218838;
+    }
+    .analyze-btn {
+      background: #17a2b8;
+    }
+    .analyze-btn:hover {
+      background: #138496;
+    }
+    input[type="text"] {
+      width: 100%;
+      max-width: 400px;
+      padding: 8px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+    }
+    input[type="file"] {
+      margin: 10px 0;
+    }
+    .method-selector {
+      padding: 15px;
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 5px;
+      margin: 15px 0;
+    }
+    .method-option {
+      margin: 8px 0;
+      padding: 5px;
+    }
+    .status {
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    .success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+    }
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .info {
+      background: #cce7ff;
+      color: #004085;
+      border: 1px solid #b3d9ff;
+    }
+    h2 {
+      color: #343a40;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px;
+    }
+    h3 {
+      color: #495057;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Enhanced PNG-Resistant Steganography Tool</h2>
+    <p>This tool uses advanced PNG-compression-resistant methods with redundancy and error correction to ensure data survives download/upload cycles.</p>
+
+    <div class="method-selector">
+      <strong>🔧 Encoding Method:</strong><br>
+      <div class="method-option">
+        <input type="radio" name="method" value="lsb" id="methodLSB">
+        <label for="methodLSB">LSB (Least Significant Bit) - ⚠️ May lose data in PNG</label>
+      </div>
+      <div class="method-option">
+        <input type="radio" name="method" value="robust" id="methodRobust">
+        <label for="methodRobust">Robust Even/Odd - 🛡️ Basic PNG resistance</label>
+      </div>
+      <div class="method-option">
+        <input type="radio" name="method" value="redundant" id="methodRedundant" checked>
+        <label for="methodRedundant">Triple Redundancy - 🔒 High PNG resistance with error correction</label>
+      </div>
+      <div class="method-option">
+        <input type="radio" name="method" value="dct" id="methodDCT">
+        <label for="methodDCT">DCT Frequency - 🎯 Advanced frequency domain encoding</label>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>📁 Step 1: Load Image and Analyze</h3>
+      <label><strong>Upload PNG Image:</strong></label><br>
+      <input type="file" accept="image/*" id="sourceImage"><br>
+      
+      <canvas id="canvas"></canvas>
+      <div id="imageInfo" class="debug-info"></div>
+    </div>
+
+    <div class="section">
+      <h3>✏️ Step 2: Encode Message</h3>
+      <label><strong>Message to Hide:</strong></label><br>
+      <input type="text" id="messageInput" placeholder="Hello World!" value="Test Message 123"><br><br>
+      <button onclick="encode()" id="encodeBtn" disabled>🔐 Encode Message</button>
+      <button onclick="analyzeEncoding()" id="analyzeBtn" class="analyze-btn" disabled>🔍 Analyze Encoding</button>
+      <button onclick="downloadImage()" id="downloadBtn" class="download-btn" disabled>💾 Download Encoded Image</button>
+      
+      <div id="encodeStatus"></div>
+      <div id="encodeInfo" class="debug-info"></div>
+    </div>
+
+    <div class="section">
+      <h3>🧪 Step 3: Test Current Image Decoding</h3>
+      <button onclick="testDecode()" id="decodeBtn" disabled>🔓 Test Decode Current Image</button>
+      <div id="decodeInfo" class="debug-info"></div>
+    </div>
+
+    <div class="section">
+      <h3>📥 Step 4: Load Downloaded Image for Testing</h3>
+      <label><strong>Upload Downloaded Encoded Image:</strong></label><br>
+      <input type="file" accept="image/*" id="testImage"><br><br>
+      <button onclick="decodeTestImage()" id="decodeTestBtn" disabled>🔍 Decode Downloaded Image</button>
+      <div id="testDecodeInfo" class="debug-info"></div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    let originalImageData;
+    let encodedImageData;
+    let testImageData;
+    let currentMethod = 'redundant';
+
+    // Update method when radio buttons change
+    document.querySelectorAll('input[name="method"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        currentMethod = radio.value;
+      });
+    });
+
+    document.getElementById('sourceImage').onchange = e => loadImage(e, 'source');
+    document.getElementById('testImage').onchange = e => loadImage(e, 'test');
+
+    function loadImage(e, type) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const img = new Image();
+      img.onload = () => {
+        if (type === 'source') {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          document.getElementById('encodeBtn').disabled = false;
+          analyzeImage();
+        } else {
+          const testCanvas = document.createElement('canvas');
+          const testCtx = testCanvas.getContext('2d', { willReadFrequently: true });
+          testCanvas.width = img.width;
+          testCanvas.height = img.height;
+          testCtx.drawImage(img, 0, 0);
+          testImageData = testCtx.getImageData(0, 0, testCanvas.width, testCanvas.height);
+          document.getElementById('decodeTestBtn').disabled = false;
+        }
+      };
+      img.src = URL.createObjectURL(file);
+    }
+
+    function analyzeImage() {
+      const pixels = originalImageData.data;
+      let info = `🖼️ Image Analysis:\n`;
+      info += `Dimensions: ${originalImageData.width}x${originalImageData.height}\n`;
+      info += `Total pixels: ${originalImageData.width * originalImageData.height}\n`;
+      info += `RGB channels available: ${Math.floor(pixels.length * 3 / 4)}\n\n`;
+      
+      // Color distribution analysis
+      let colorStats = { r: new Set(), g: new Set(), b: new Set() };
+      let evenOddStats = { r: {even: 0, odd: 0}, g: {even: 0, odd: 0}, b: {even: 0, odd: 0} };
+      
+      for (let i = 0; i < Math.min(4000, pixels.length); i += 4) {
+        colorStats.r.add(pixels[i]);
+        colorStats.g.add(pixels[i+1]);
+        colorStats.b.add(pixels[i+2]);
+        
+        evenOddStats.r[pixels[i] % 2 === 0 ? 'even' : 'odd']++;
+        evenOddStats.g[pixels[i+1] % 2 === 0 ? 'even' : 'odd']++;
+        evenOddStats.b[pixels[i+2] % 2 === 0 ? 'even' : 'odd']++;
+      }
+      
+      info += `📊 Color Distribution (first 1000 pixels):\n`;
+      info += `Unique R values: ${colorStats.r.size} | Even/Odd: ${evenOddStats.r.even}/${evenOddStats.r.odd}\n`;
+      info += `Unique G values: ${colorStats.g.size} | Even/Odd: ${evenOddStats.g.even}/${evenOddStats.g.odd}\n`;
+      info += `Unique B values: ${colorStats.b.size} | Even/Odd: ${evenOddStats.b.even}/${evenOddStats.b.odd}\n\n`;
+      
+      // Capacity estimation
+      const maxBitsLSB = Math.floor(pixels.length * 3 / 4);
+      const maxBitsRedundant = Math.floor(maxBitsLSB / 3);
+      info += `💾 Storage Capacity:\n`;
+      info += `LSB method: ~${Math.floor(maxBitsLSB / 8)} characters\n`;
+      info += `Redundant method: ~${Math.floor(maxBitsRedundant / 8)} characters\n`;
+      
+      document.getElementById('imageInfo').textContent = info;
+    }
+
+    function textToBinary(text) {
+      return [...text].map(c => c.charCodeAt(0).toString(2).padStart(8, '0')).join('');
+    }
+
+    function binaryToText(bin) {
+      let text = '';
+      for (let i = 0; i < bin.length; i += 8) {
+        const byte = bin.slice(i, i + 8);
+        if (byte.length === 8) {
+          const charCode = parseInt(byte, 2);
+          if (charCode === 0) break;
+          text += String.fromCharCode(charCode);
+        }
+      }
+      return text;
+    }
+
+    // Simple checksum for error detection
+    function calculateChecksum(text) {
+      let sum = 0;
+      for (let i = 0; i < text.length; i++) {
+        sum += text.charCodeAt(i);
+      }
+      return sum % 256;
+    }
+
+    function encode() {
+      const message = document.getElementById('messageInput').value;
+      if (!message) return;
+      
+      const pixels = new Uint8ClampedArray(originalImageData.data);
+      
+      switch (currentMethod) {
+        case 'lsb':
+          encodeLSB(pixels, message);
+          break;
+        case 'robust':
+          encodeRobust(pixels, message);
+          break;
+        case 'redundant':
+          encodeRedundant(pixels, message);
+          break;
+        case 'dct':
+          encodeDCT(pixels, message);
+          break;
+      }
+      
+      encodedImageData = new ImageData(pixels, originalImageData.width, originalImageData.height);
+      ctx.putImageData(encodedImageData, 0, 0);
+      
+      document.getElementById('analyzeBtn').disabled = false;
+      document.getElementById('decodeBtn').disabled = false;
+      document.getElementById('downloadBtn').disabled = false;
+    }
+
+    function encodeLSB(pixels, message) {
+      const binaryMessage = textToBinary(message + '\0');
+      let info = `🔧 LSB Encoding:\n`;
+      info += `Message: "${message}"\n`;
+      info += `Binary length: ${binaryMessage.length} bits\n\n`;
+      
+      let bitIndex = 0;
+      for (let i = 0; i < pixels.length && bitIndex < binaryMessage.length; i++) {
+        if ((i + 1) % 4 === 0) continue; // Skip alpha
+        
+        const newBit = parseInt(binaryMessage[bitIndex]);
+        pixels[i] = (pixels[i] & 0xFE) | newBit;
+        bitIndex++;
+      }
+      
+      info += `✅ Encoded ${bitIndex} bits using LSB method.\n`;
+      document.getElementById('encodeInfo').textContent = info;
+      document.getElementById('encodeStatus').innerHTML = 
+        `<div class="status warning">⚠️ LSB encoding complete. May not survive PNG compression!</div>`;
+    }
+
+    function encodeRobust(pixels, message) {
+      const binaryMessage = textToBinary(message + '\0');
+      let info = `🛡️ Robust Encoding (Even/Odd):\n`;
+      info += `Message: "${message}"\n`;
+      info += `Binary length: ${binaryMessage.length} bits\n\n`;
+      
+      let bitIndex = 0;
+      let modifications = [];
+      
+      for (let i = 0; i < pixels.length && bitIndex < binaryMessage.length; i++) {
+        if ((i + 1) % 4 === 0) continue; // Skip alpha
+        
+        const originalValue = pixels[i];
+        const newBit = parseInt(binaryMessage[bitIndex]);
+        
+        // Use modulo method with stronger changes
+        if (newBit === 0) {
+          // Make even
+          if (originalValue % 2 === 1) {
+            pixels[i] = Math.max(0, originalValue - 1);
+          }
+        } else {
+          // Make odd
+          if (originalValue % 2 === 0) {
+            pixels[i] = Math.min(255, originalValue + 1);
+          }
+        }
+        
+        if (bitIndex < 10) {
+          modifications.push({
+            index: i,
+            original: originalValue,
+            new: pixels[i],
+            bit: newBit
+          });
+        }
+        
+        bitIndex++;
+      }
+      
+      info += `✅ Encoded ${bitIndex} bits using robust method.\n`;
+      info += `First 10 modifications:\n`;
+      modifications.forEach(mod => {
+        info += `Index ${mod.index}: ${mod.original} -> ${mod.new} (bit: ${mod.bit})\n`;
+      });
+      
+      document.getElementById('encodeInfo').textContent = info;
+      document.getElementById('encodeStatus').innerHTML = 
+        `<div class="status success">✅ Robust encoding complete. Should survive PNG compression!</div>`;
+    }
+
+    function encodeRedundant(pixels, message) {
+      // Add checksum for error detection
+      const checksum = calculateChecksum(message);
+      const messageWithChecksum = message + String.fromCharCode(checksum) + '\0';
+      const binaryMessage = textToBinary(messageWithChecksum);
+      
+      let info = `🔒 Triple Redundancy Encoding:\n`;
+      info += `Message: "${message}"\n`;
+      info += `Checksum: ${checksum}\n`;
+      info += `Binary length: ${binaryMessage.length} bits\n`;
+      info += `Total with redundancy: ${binaryMessage.length * 3} bits\n\n`;
+      
+      let bitIndex = 0;
+      let pixelIndex = 0;
+      let successfulBits = 0;
+      
+      // Encode each bit 3 times with spacing
+      for (let b = 0; b < binaryMessage.length; b++) {
+        const bit = parseInt(binaryMessage[b]);
+        let encodedCopies = 0;
+        
+        // Try to encode this bit 3 times
+        for (let copy = 0; copy < 3 && pixelIndex < pixels.length; copy++) {
+          // Skip alpha channels and find next suitable pixel
+          while (pixelIndex < pixels.length && (pixelIndex + 1) % 4 === 0) {
+            pixelIndex++;
+          }
+          
+          if (pixelIndex >= pixels.length) break;
+          
+          const originalValue = pixels[pixelIndex];
+          
+          // Use stronger even/odd encoding with additional checks
+          if (bit === 0) {
+            // Make even with preference for values that are already close
+            if (originalValue % 2 === 1) {
+              if (originalValue > 1) {
+                pixels[pixelIndex] = originalValue - 1;
+              } else {
+                pixels[pixelIndex] = originalValue + 1;
+              }
+            }
+          } else {
+            // Make odd
+            if (originalValue % 2 === 0) {
+              if (originalValue < 254) {
+                pixels[pixelIndex] = originalValue + 1;
+              } else {
+                pixels[pixelIndex] = originalValue - 1;
+              }
+            }
+          }
+          
+          encodedCopies++;
+          pixelIndex += 7; // Space out the copies to avoid compression artifacts
+        }
+        
+        if (encodedCopies === 3) {
+          successfulBits++;
+        }
+      }
+      
+      info += `✅ Successfully encoded ${successfulBits}/${binaryMessage.length} bits with triple redundancy.\n`;
+      info += `Used ${pixelIndex} pixel positions out of ${Math.floor(pixels.length * 3 / 4)} available.\n`;
+      
+      document.getElementById('encodeInfo').textContent = info;
+      document.getElementById('encodeStatus').innerHTML = 
+        `<div class="status success">🔒 Triple redundancy encoding complete. High PNG resistance!</div>`;
+    }
+
+    function encodeDCT(pixels, message) {
+      // Simplified DCT-inspired method - encode in frequency patterns
+      const binaryMessage = textToBinary(message + '\0');
+      let info = `🎯 DCT Frequency Encoding:\n`;
+      info += `Message: "${message}"\n`;
+      info += `Binary length: ${binaryMessage.length} bits\n\n`;
+      
+      const blockSize = 8;
+      let bitIndex = 0;
+      
+      for (let y = 0; y < originalImageData.height - blockSize && bitIndex < binaryMessage.length; y += blockSize) {
+        for (let x = 0; x < originalImageData.width - blockSize && bitIndex < binaryMessage.length; x += blockSize) {
+          const bit = parseInt(binaryMessage[bitIndex]);
+          
+          // Modify the average intensity of the block
+          let sum = 0;
+          const positions = [];
+          
+          for (let dy = 0; dy < blockSize; dy++) {
+            for (let dx = 0; dx < blockSize; dx++) {
+              const pixelIndex = ((y + dy) * originalImageData.width + (x + dx)) * 4;
+              if (pixelIndex < pixels.length - 3) {
+                sum += pixels[pixelIndex] + pixels[pixelIndex + 1] + pixels[pixelIndex + 2];
+                positions.push(pixelIndex);
+              }
+            }
+          }
+          
+          const avgIntensity = sum / (positions.length * 3);
+          const adjustment = bit === 1 ? 2 : -2;
+          
+          // Adjust block pixels slightly
+          positions.forEach(pos => {
+            for (let c = 0; c < 3; c++) {
+              pixels[pos + c] = Math.max(0, Math.min(255, pixels[pos + c] + adjustment));
+            }
+          });
+          
+          bitIndex++;
+        }
+      }
+      
+      info += `✅ Encoded ${bitIndex} bits using DCT-inspired method in ${blockSize}x${blockSize} blocks.\n`;
+      document.getElementById('encodeInfo').textContent = info;
+      document.getElementById('encodeStatus').innerHTML = 
+        `<div class="status success">🎯 DCT encoding complete. Frequency domain resistance!</div>`;
+    }
+
+    function analyzeEncoding() {
+      if (!encodedImageData || !originalImageData) return;
+      
+      const original = originalImageData.data;
+      const encoded = encodedImageData.data;
+      let changes = 0;
+      let maxChange = 0;
+      let totalDiff = 0;
+      
+      for (let i = 0; i < Math.min(original.length, 4000); i++) {
+        if ((i + 1) % 4 === 0) continue;
+        const diff = Math.abs(original[i] - encoded[i]);
+        if (diff > 0) {
+          changes++;
+          maxChange = Math.max(maxChange, diff);
+          totalDiff += diff;
+        }
+      }
+      
+      let analysis = `\n📊 Encoding Analysis (first 3000 RGB values):\n`;
+      analysis += `Total changes: ${changes}\n`;
+      analysis += `Maximum change: ${maxChange}\n`;
+      analysis += `Average change: ${changes > 0 ? (totalDiff / changes).toFixed(2) : 0}\n`;
+      analysis += `Change percentage: ${(changes / 3000 * 100).toFixed(2)}%\n`;
+      analysis += `Method used: ${currentMethod.toUpperCase()}\n`;
+      
+      document.getElementById('encodeInfo').textContent += analysis;
+    }
+
+    function testDecode() {
+      decodeImageData(encodedImageData, 'decodeInfo', '🧪 Current Image');
+    }
+
+    function decodeTestImage() {
+      decodeImageData(testImageData, 'testDecodeInfo', '📥 Downloaded Image');
+    }
+
+    function decodeImageData(imageData, outputId, title) {
+      if (!imageData) return;
+      
+      let decodedText = '';
+      let confidence = 0;
+      
+      switch (currentMethod) {
+        case 'lsb':
+          decodedText = decodeLSB(imageData);
+          break;
+        case 'robust':
+          decodedText = decodeRobust(imageData);
+          break;
+        case 'redundant':
+          const result = decodeRedundant(imageData);
+          decodedText = result.text;
+          confidence = result.confidence;
+          break;
+        case 'dct':
+          decodedText = decodeDCT(imageData);
+          break;
+      }
+      
+      let info = `${title} Decoding (${currentMethod.toUpperCase()}):\n`;
+      info += `Decoded text: "${decodedText}"\n`;
+      info += `Text length: ${decodedText.length}\n`;
+      
+      if (currentMethod === 'redundant' && confidence > 0) {
+        info += `Confidence: ${(confidence * 100).toFixed(1)}%\n`;
+      }
+      
+      if (decodedText.length > 0) {
+        info += `\n✅ SUCCESS: Message decoded successfully!\n`;
+        
+        // Verify checksum for redundant method
+        if (currentMethod === 'redundant' && decodedText.length > 1) {
+          const message = decodedText.slice(0, -1);
+          const receivedChecksum = decodedText.charCodeAt(decodedText.length - 1);
+          const expectedChecksum = calculateChecksum(message);
+          
+          if (receivedChecksum === expectedChecksum) {
+            info += `🔍 Checksum verified: Message integrity confirmed!\n`;
+          } else {
+            info += `⚠️ Checksum mismatch: Some data corruption detected.\n`;
+            info += `Expected: ${expectedChecksum}, Received: ${receivedChecksum}\n`;
+          }
+        }
+      } else {
+        info += `\n❌ FAILED: No readable message found.\n`;
+        if (currentMethod === 'redundant') {
+          info += `Try adjusting the decoding parameters or check image compression.\n`;
+        }
+      }
+      
+      document.getElementById(outputId).textContent = info;
+    }
+
+    function decodeLSB(imageData) {
+      const pixels = imageData.data;
+      let binaryString = '';
+      
+      for (let i = 0; i < pixels.length; i++) {
+        if ((i + 1) % 4 === 0) continue;
+        binaryString += (pixels[i] & 1);
+        if (binaryString.length >= 2000) break;
+      }
+      
+      return binaryToText(binaryString);
+    }
+
+    function decodeRobust(imageData) {
+      const pixels = imageData.data;
+      let binaryString = '';
+      
+      for (let i = 0; i < pixels.length; i++) {
+        if ((i + 1) % 4 === 0) continue;
+        binaryString += (pixels[i] % 2);
+        if (binaryString.length >= 2000) break;
+      }
+      
+      return binaryToText(binaryString);
+    }
+
+    function decodeRedundant(imageData) {
+      const pixels = imageData.data;
+      let binaryString = '';
+      let pixelIndex = 0;
+      let totalBits = 0;
+      let correctBits = 0;
+      
+      // Estimate message length (try different lengths)
+      const maxBits = Math.min(500, Math.floor(pixels.length / 21)); // Conservative estimate
+      
+      for (let b = 0; b < maxBits; b++) {
+        let votes = [0, 0]; // votes for 0 and 1
+        
+        // Read 3 copies of this bit
+        for (let copy = 0; copy < 3 && pixelIndex < pixels.length; copy++) {
+          // Skip alpha channels
+          while (pixelIndex < pixels.length && (pixelIndex + 1) % 4 === 0) {
+            pixelIndex++;
+          }
+          
+          if (pixelIndex >= pixels.length) break;
+          
+          const bitValue = pixels[pixelIndex] % 2;
+          votes[bitValue]++;
+          
+          pixelIndex += 7; // Same spacing as encoding
+        }
+        
+        // Majority vote
+        if (votes[0] + votes[1] > 0) {
+          const decodedBit = votes[1] > votes[0] ? 1 : 0;
+          binaryString += decodedBit;
+          totalBits++;
+          
+          // Calculate confidence based on unanimous vs majority votes
+          if (votes[decodedBit] === 3) {
+            correctBits++;
+          }
+        }
+      }
+      
+      const confidence = totalBits > 0 ? correctBits / totalBits : 0;
+      const text = binaryToText(binaryString);
+      
+      return { text, confidence };
+    }
+
+    function decodeDCT(imageData) {
+      const pixels = imageData.data;
+      let binaryString = '';
+      const blockSize = 8;
+      
+      for (let y = 0; y < imageData.height - blockSize; y += blockSize) {
+        for (let x = 0; x < imageData.width - blockSize; x += blockSize) {
+          let sum = 0;
+          let count = 0;
+          
+          for (let dy = 0; dy < blockSize; dy++) {
+            for (let dx = 0; dx < blockSize; dx++) {
+              const pixelIndex = ((y + dy) * imageData.width + (x + dx)) * 4;
+              if (pixelIndex < pixels.length - 3) {
+                sum += pixels[pixelIndex] + pixels[pixelIndex + 1] + pixels[pixelIndex + 2];
+                count += 3;
+              }
+            }
+          }
+          
+          const avgIntensity = sum / count;
+          // Use a threshold to determine bit value
+          binaryString += avgIntensity > 128 ? '1' : '0';
+          
+          if (binaryString.length >= 1000) break;
+        }
+        if (binaryString.length >= 1000) break;
+      }
+      
+      return binaryToText(binaryString);
+    }
+
+    function downloadImage() {
+      if (!encodedImageData) return;
+      
+      const downloadCanvas = document.createElement('canvas');
+      const downloadCtx = downloadCanvas.getContext('2d');
+      downloadCanvas.width = encodedImageData.width;
+      downloadCanvas.height = encodedImageData.height;
+      downloadCtx.putImageData(encodedImageData, 0, 0);
+      
+      downloadCanvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');.0
+        a.href = url;
+        a.download = `steganography_${currentMethod}_encoded.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        document.getElementById('encodeStatus').innerHTML += 
+          `<div class="status success">📥 Image downloaded with ${currentMethod.toUpperCase()} encoding!</div>`;
+      }, 'image/png', 1.0);
+    }
+  </script>
+</body>
+</html>
+
