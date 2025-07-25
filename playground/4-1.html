@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BMP Steganography with Padding Support</title>
+</head>
+<body>
+  <h2>BMP Steganography (24-bit Only)</h2>
+
+  <label><strong>Upload BMP to Encode:</strong></label><br>
+  <input type="file" id="bmpInput" accept=".bmp"><br><br>
+
+  <textarea id="message" rows="4" cols="50" placeholder="Enter message to encode..."></textarea><br>
+  <button onclick="encodeMessage()">Encode & Download</button>
+
+  <hr>
+
+  <label><strong>Upload Stego BMP to Decode:</strong></label><br>
+  <input type="file" id="stegoInput" accept=".bmp">
+  <button onclick="decodeMessage()">Decode Message</button>
+
+  <script>
+    let originalBytes = null;
+    let width = 0, height = 0, dataOffset = 54;
+
+    document.getElementById("bmpInput").addEventListener("change", function () {
+      const file = this.files[0];
+      const reader = new FileReader();
+      reader.onload = () => {
+        originalBytes = new Uint8Array(reader.result);
+
+        // Get width and height from DIB header
+        width = originalBytes[18] | (originalBytes[19] << 8) | (originalBytes[20] << 16) | (originalBytes[21] << 24);
+        height = originalBytes[22] | (originalBytes[23] << 8) | (originalBytes[24] << 16) | (originalBytes[25] << 24);
+        dataOffset = originalBytes[10] | (originalBytes[11] << 8) | (originalBytes[12] << 16) | (originalBytes[13] << 24);
+
+        const bitDepth = originalBytes[28] | (originalBytes[29] << 8);
+        const compression = originalBytes[30] | (originalBytes[31] << 8) | (originalBytes[32] << 16) | (originalBytes[33] << 24);
+
+        console.log("BMP Loaded: Width =", width, "Height =", height, "BitDepth =", bitDepth, "Compression =", compression);
+
+        if (bitDepth !== 24 || compression !== 0) {
+          alert("Only uncompressed 24-bit BMPs are supported.");
+          originalBytes = null;
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    function encodeMessage() {
+      if (!originalBytes) return alert("Upload a valid BMP first!");
+      const message = document.getElementById("message").value;
+      if (!message) return alert("Enter a message to encode!");
+
+      const messageBits = [];
+      for (let i = 0; i < message.length; i++) {
+        const charCode = message.charCodeAt(i);
+        for (let b = 7; b >= 0; b--) {
+          messageBits.push((charCode >> b) & 1);
+        }
+      }
+      messageBits.push(...Array(8).fill(0)); // End marker
+
+      const stegoBytes = encodeMessageWithPadding(originalBytes, width, height, messageBits, dataOffset);
+      if (!stegoBytes) {
+        alert("Message is too long for this image.");
+        return;
+      }
+
+      const blob = new Blob([stegoBytes], { type: "image/bmp" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "stego.bmp";
+      a.click();
+    }
+
+    function encodeMessageWithPadding(bytes, width, height, messageBits, dataOffset) {
+      // const stegoBytes = new Uint8Array(bytes); // clone
+      // const rowSize = width * 3;
+      // const padding = (4 - (rowSize % 4)) % 4;
+
+      // let bitIndex = 0;
+      // let bytePos = dataOffset;
+
+      // console.log("Encoding with padding:", padding, "Row size:", rowSize);
+
+      // for (let row = 0; row < height; row++) {
+      //   for (let col = 0; col < rowSize; col++) {
+      //     if (bitIndex >= messageBits.length) break;
+
+      //     stegoBytes[bytePos] = (stegoBytes[bytePos] & 0xFE) | messageBits[bitIndex];
+      //     bitIndex++;
+      //     bytePos++;
+      //   }
+      //   bytePos += padding;
+      // }
+
+      // return bitIndex >= messageBits.length ? stegoBytes : null;
+      // patch with new code to handle negative height BMP images occurs when another image format is converted to 24-bit BMP for top-down images
+      const stegoBytes = new Uint8Array(bytes);
+      const rowSize = width * 3;
+      const padding = (4 - (rowSize % 4)) % 4;
+
+      const absHeight = Math.abs(height);
+      const isTopDown = height < 0;
+
+      let bitIndex = 0;
+
+      for (let row = 0; row < absHeight; row++) {
+        const actualRow = isTopDown ? row : absHeight - 1 - row;
+        let rowStart = dataOffset + actualRow * (rowSize + padding);
+
+        for (let col = 0; col < rowSize && bitIndex < messageBits.length; col++) {
+          const pixelIndex = rowStart + col;
+          stegoBytes[pixelIndex] = (stegoBytes[pixelIndex] & 0xFE) | messageBits[bitIndex];
+          bitIndex++;
+        }
+  }
+
+  return bitIndex >= messageBits.length ? stegoBytes : null;
+    }
+
+    function decodeMessage() {
+      const file = document.getElementById("stegoInput").files[0];
+      if (!file) return alert("Upload a stego BMP image first.");
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const bytes = new Uint8Array(reader.result);
+
+        const width = bytes[18] | (bytes[19] << 8) | (bytes[20] << 16) | (bytes[21] << 24);
+        const height = bytes[22] | (bytes[23] << 8) | (bytes[24] << 16) | (bytes[25] << 24);
+        const dataOffset = bytes[10] | (bytes[11] << 8) | (bytes[12] << 16) | (bytes[13] << 24);
+
+        const message = decodeMessageWithPadding(bytes, width, height, dataOffset);
+        alert("Decoded Message:\n" + message);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function decodeMessageWithPadding(bytes, width, height, dataOffset) {
+      // const rowSize = width * 3;
+      // const padding = (4 - (rowSize % 4)) % 4;
+
+      // let bits = [];
+      // let bytePos = dataOffset;
+
+      // console.log("Decoding with padding:", padding, "Row size:", rowSize);
+
+      // for (let row = 0; row < height; row++) {
+      //   for (let col = 0; col < rowSize; col++) {
+      //     bits.push(bytes[bytePos] & 1);
+      //     bytePos++;
+      //   }
+      //   bytePos += padding;
+      // }
+
+      // const chars = [];
+      // for (let i = 0; i < bits.length; i += 8) {
+      //   const byte = bits.slice(i, i + 8).reduce((acc, b, j) => acc | (b << (7 - j)), 0);
+      //   if (byte === 0) break;
+      //   chars.push(String.fromCharCode(byte));
+      // }
+
+      // return chars.join("");
+      // patch with new code
+      const rowSize = width * 3;
+      const padding = (4 - (rowSize % 4)) % 4;
+
+      const absHeight = Math.abs(height);
+      const isTopDown = height < 0;
+
+      let bits = [];
+
+      for (let row = 0; row < absHeight; row++) {
+        const actualRow = isTopDown ? row : absHeight - 1 - row;
+        let rowStart = dataOffset + actualRow * (rowSize + padding);
+
+        for (let col = 0; col < rowSize; col++) {
+          bits.push(bytes[rowStart + col] & 1);
+        }
+      }
+
+      const chars = [];
+      for (let i = 0; i < bits.length; i += 8) {
+        const byte = bits.slice(i, i + 8).reduce((acc, b, j) => acc | (b << (7 - j)), 0);
+        if (byte === 0) break;
+        chars.push(String.fromCharCode(byte));
+      }
+
+      return chars.join("");
+    }
+  </script>
+</body>
+</html>

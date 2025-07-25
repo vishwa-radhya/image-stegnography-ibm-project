@@ -1,0 +1,118 @@
+<!--
+ testing the functionality of accepting any image format and converting them into 24-bit BMP using bmp-js
+ bmp-js encodes raw RGBA data into BMP
+ steps:
+    Load the image (any format).
+    Draw it on a <canvas>.
+    Extract RGBA data using getImageData.
+    Strip alpha and encode as 24-bit BMP using bmp-js.
+    Use the resulting BMP ArrayBuffer for steganography.
+    // the issue with bmp-js is node version has require() statements doesnt get understanded by browser even with cdn instead we can use 
+    1. module bundlers like vite and npm modules (or)
+    2. Pure JS BMP encoder (standalone, browser-friendly)
+    Now, hitting the second one
+-->
+<!-- STATUS: ABSOLUTE SUCCESS-->
+<!-- the previous bmp enconding/decoding is updated to par with these converted ones and actual ones-->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Convert Image to 24-bit BMP</title>
+</head>
+<body>
+  <h2>Select an image (PNG, JPG, etc.)</h2>
+  <input type="file" id="inputImage" accept="image/*">
+  <button id="downloadBMP" disabled>Download 24-bit BMP</button>
+
+  <script>
+    const input = document.getElementById('inputImage');
+    const downloadBtn = document.getElementById('downloadBMP');
+    let bmpBuffer = null;
+
+    input.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        console.log("Original ImageData:", imageData);
+
+        bmpBuffer = encode24BitBMP(imageData);
+        console.log("✅ Converted to 24-bit BMP, size:", bmpBuffer.length);
+
+        downloadBtn.disabled = false;
+      };
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      const blob = new Blob([bmpBuffer], { type: 'image/bmp' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'converted-24bit.bmp';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    function encode24BitBMP(imageData) {
+      const { width, height, data } = imageData;
+      const rowSize = Math.floor((24 * width + 31) / 32) * 4;
+      const padding = rowSize - width * 3;
+      const pixelDataSize = rowSize * height;
+      const fileSize = 54 + pixelDataSize;
+
+      const buffer = new Uint8Array(fileSize);
+      const dv = new DataView(buffer.buffer);
+
+      // BMP Header
+      dv.setUint8(0, 'B'.charCodeAt(0));
+      dv.setUint8(1, 'M'.charCodeAt(0));
+      dv.setUint32(2, fileSize, true);   // File size
+      dv.setUint32(6, 0, true);          // Reserved
+      dv.setUint32(10, 54, true);        // Offset to pixel data
+
+      // DIB Header (BITMAPINFOHEADER)
+      dv.setUint32(14, 40, true);        // DIB header size
+      dv.setInt32(18, width, true);      // Width
+      dv.setInt32(22, -height, true);    // Negative => top-down
+      dv.setUint16(26, 1, true);         // Planes
+      dv.setUint16(28, 24, true);        // Bits per pixel
+      dv.setUint32(30, 0, true);         // Compression (none)
+      dv.setUint32(34, pixelDataSize, true); // Size of bitmap data
+      dv.setUint32(38, 2835, true);      // Horiz resolution
+      dv.setUint32(42, 2835, true);      // Vert resolution
+      dv.setUint32(46, 0, true);         // Colors in palette
+      dv.setUint32(50, 0, true);         // Important colors
+
+      // Pixel Data (24-bit BGR)
+      let offset = 54;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const idx = (y * width + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+
+          buffer[offset++] = b;
+          buffer[offset++] = g;
+          buffer[offset++] = r;
+        }
+        // Padding
+        for (let p = 0; p < padding; p++) {
+          buffer[offset++] = 0;
+        }
+      }
+
+      return buffer;
+    }
+  </script>
+</body>
+</html>

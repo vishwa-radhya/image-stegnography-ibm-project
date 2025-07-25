@@ -1,0 +1,117 @@
+<!--
+    trying the next option using bmp format for stegnography because "BMP files don’t use compression or filters, so pixel data remains exact."
+-->
+    <!--STATUS : SUCCESS-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>4. BMP Steganography</title>
+</head>
+<body>
+  <h2>BMP Steganography (Encode / Decode)</h2>
+
+  <input type="file" id="bmpInput" accept=".bmp">
+  <br><br>
+
+  <textarea id="message" rows="4" cols="50" placeholder="Enter message to encode..."></textarea><br>
+  <button onclick="encodeMessage()">Encode & Download</button>
+
+  <br><br>
+  <input type="file" id="stegoInput" accept=".bmp">
+  <button onclick="decodeMessage()">Decode Message</button>
+
+  <script>
+    let originalBytes = null;
+
+    document.getElementById("bmpInput").addEventListener("change", function () {
+      const file = this.files[0];
+      const reader = new FileReader();
+      reader.onload = () => {
+        originalBytes = new Uint8Array(reader.result);
+        console.log("Original BMP loaded:", originalBytes.length, "bytes");
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    function encodeMessage() {
+      if (!originalBytes) return alert("Upload a BMP image first!");
+      const message = document.getElementById("message").value;
+      if (!message) return alert("Enter a message to encode!");
+
+      // Convert message to binary (ending with a special stop pattern)
+      const messageBits = [];
+      for (let i = 0; i < message.length; i++) {
+        const charCode = message.charCodeAt(i);
+        for (let b = 7; b >= 0; b--) {
+          messageBits.push((charCode >> b) & 1);
+        }
+      }
+      // Add end marker (e.g. 8 zeros)
+      messageBits.push(...Array(8).fill(0));
+      console.log("Message bits:", messageBits);
+
+      const dataOffset =
+        originalBytes[10] |
+        (originalBytes[11] << 8) |
+        (originalBytes[12] << 16) |
+        (originalBytes[13] << 24);
+      console.log("Pixel data starts at offset:", dataOffset);
+
+      const stegoBytes = new Uint8Array(originalBytes); // copy
+
+      let bitIndex = 0;
+      for (let i = dataOffset; i < stegoBytes.length && bitIndex < messageBits.length; i++) {
+        stegoBytes[i] = (stegoBytes[i] & 0xFE) | messageBits[bitIndex]; // LSB encode
+        bitIndex++;
+      }
+
+      if (bitIndex < messageBits.length) {
+        alert("Message too long for this image!");
+        return;
+      }
+
+      console.log("Encoding complete. Total bits written:", bitIndex);
+      const blob = new Blob([stegoBytes], { type: "image/bmp" });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "stego.bmp";
+      a.click();
+    }
+
+    function decodeMessage() {
+      const file = document.getElementById("stegoInput").files[0];
+      if (!file) return alert("Upload stego BMP first!");
+      const reader = new FileReader();
+      reader.onload = () => {
+        const bytes = new Uint8Array(reader.result);
+        const dataOffset =
+          bytes[10] |
+          (bytes[11] << 8) |
+          (bytes[12] << 16) |
+          (bytes[13] << 24);
+        console.log("Decoding from offset:", dataOffset);
+
+        const bits = [];
+        for (let i = dataOffset; i < bytes.length; i++) {
+          bits.push(bytes[i] & 1);
+        }
+
+        let chars = [];
+        for (let i = 0; i < bits.length; i += 8) {
+          const byte = bits.slice(i, i + 8).reduce((acc, b, j) => acc | (b << (7 - j)), 0);
+          if (byte === 0) break; // stop marker
+          chars.push(String.fromCharCode(byte));
+        }
+
+        const message = chars.join("");
+        console.log("Decoded message:", message);
+        alert("Decoded Message:\n" + message);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  </script>
+</body>
+</html>

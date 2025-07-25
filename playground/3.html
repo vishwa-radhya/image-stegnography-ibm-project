@@ -1,0 +1,124 @@
+<!-- 
+    the image corrupted by browser compression techniques when exported
+    so we are proceesding with alternative ones 
+    1. bypass canvas and use raw data for modification
+    2. use BMP format images ????
+    3. offload compress to a custom backend ????
+    -----------------------------------------------------------------------------------------------------
+    testing first one
+    using upng-js npm package
+-->
+<!--
+    UPNG.decode internally uses inflate() to decompress PNG chunks.
+    But this method is not built-in unless bundled.
+    pako.inflate is the standard decompression function.
+    Once you patch UPNG.inflate = pako.inflate, everything works.
+-->
+    <!-- STATUS : FAIl-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <script src="https://unpkg.com/upng-js@2.1.0/UPNG.js"></script>
+</head>
+<body>
+    <input type="file" id="imageInput" accept="image/png">
+    <br>
+    <textarea id="messageInput" placeholder="Enter message to hide"></textarea>
+    <br>
+    <button onclick="encode()">Encode</button>
+    <button onclick="decode()">Decode</button>
+    <br>
+    <!-- <a id="donwloadLink">Download</a> -->
+    <button id="downloadBtn" disabled>Download Stego Image</button>
+    <!-- <canvas id="canvas"></canvas> -->
+</body>
+    <script>
+        UPNG['inflate']=pako.inflate;
+        let rgba, width, height,stegoURL=null,originalBuffer=null;
+        const downloadBtn = document.getElementById('downloadBtn');
+        document.getElementById('imageInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function (evt) {
+            const buffer = evt.target.result;
+            originalBuffer=buffer
+            // console.log('image buffer: ',buffer)
+            const img = UPNG.decode(buffer);
+            // console.log('img with upng decode: ',img)
+            rgba = UPNG.toRGBA8(img)[0];
+            width = img.width;
+            height = img.height;
+            // console.log("Image loaded", width, height, rgba);
+        };
+        reader.readAsArrayBuffer(file);
+        });
+        function textToBinary(text) {
+            return text.split('').map(char =>
+                char.charCodeAt(0).toString(2).padStart(8, '0')
+            ).join('');
+        }
+        function binaryToText(binary) {
+      let chars = [];
+      for (let i = 0; i < binary.length; i += 8) {
+        chars.push(String.fromCharCode(parseInt(binary.substr(i, 8), 2)));
+      }
+      return chars.join('');
+    }
+    function encode() {
+      if (!rgba) return alert("Load image first.");
+      const message = document.getElementById('messageInput').value + '\0'; // null-terminated
+      const bin = textToBinary(message);
+
+      for (let i = 0, bit = 0; i < rgba.length && bit < bin.length; i++) {
+        if ((i + 1) % 4 === 0) continue; // skip alpha
+        rgba[i] = (rgba[i] & 0xFE) | parseInt(bin[bit++]);
+      }
+
+      const stego = UPNG.encode([rgba], width, height, 0); // 0 = no compression
+      const blob = new Blob([stego], { type: 'image/png' });
+      stegoURL = URL.createObjectURL(blob)
+
+      downloadBtn.disabled=false
+      console.log('encoding complete')
+    }
+    downloadBtn.addEventListener('click',()=>{
+        if(!stegoURL) return;
+        const a = document.createElement('a');
+        a.href = stegoURL;
+        a.download='stego.png'
+        a.click()
+    })
+    function decode() {
+      if (!originalBuffer) return alert("Load image first.");
+    const img = UPNG.decode(originalBuffer);
+    const rgbaLocal = UPNG.toRGBA8(img)[0];
+    let bin = '', message = '';
+    for (let i = 0; i < rgbaLocal.length; i++) {
+        if ((i + 1) % 4 === 0) continue;
+        bin += (rgbaLocal[i] & 1).toString();
+        if (bin.length % 8 === 0) {
+            const char = String.fromCharCode(parseInt(bin.slice(-8), 2));
+            if (char === '\0') break;
+            message += char;
+        }
+    }
+
+    console.log("Decoded message: " + message);
+    }
+    </script>
+</html>
+
+<!--
+    STATUS : FAILED
+    You successfully encoded the message into the RGBA buffer.
+    You used UPNG.encode() to create a stego PNG (with 0 compression).
+    You attempted to decode the message directly from the original image's RGBA, but the result was empty or garbage.
+
+    Despite compression = 0, it still applies filters or optimizations that modify pixel values slightly — enough to destroy the hidden bits.
+    So UPNG.js is unsuitable for LSB steganography unless you decode immediately after encode, without using Blob or URL.createObjectURL.
+-->
