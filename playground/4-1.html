@@ -39,7 +39,7 @@
 
         console.log("BMP Loaded: Width =", width, "Height =", height, "BitDepth =", bitDepth, "Compression =", compression);
 
-        if (bitDepth !== 24 || compression !== 0) {
+        if (bitDepth !== 24 || compression !== 0) { 
           alert("Only uncompressed 24-bit BMPs are supported.");
           originalBytes = null;
         }
@@ -61,18 +61,18 @@
       }
       messageBits.push(...Array(8).fill(0)); // End marker
 
-      const stegoBytes = encodeMessageWithPadding(originalBytes, width, height, messageBits, dataOffset);
+      const stegoBytes = encodeMessageWithPadding(originalBytes, width, height, messageBits, dataOffset); //delegate to helper function
       if (!stegoBytes) {
         alert("Message is too long for this image.");
         return;
       }
 
-      const blob = new Blob([stegoBytes], { type: "image/bmp" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "stego.bmp";
-      a.click();
+      // const blob = new Blob([stegoBytes], { type: "image/bmp" });
+      // const url = URL.createObjectURL(blob);
+      // const a = document.createElement("a");
+      // a.href = url;
+      // a.download = "stego.bmp";
+      // a.click();
     }
 
     function encodeMessageWithPadding(bytes, width, height, messageBits, dataOffset) {
@@ -110,9 +110,10 @@
       for (let row = 0; row < absHeight; row++) {
         const actualRow = isTopDown ? row : absHeight - 1 - row;
         let rowStart = dataOffset + actualRow * (rowSize + padding);
-
+        // console.log(actualRow,rowStart)
         for (let col = 0; col < rowSize && bitIndex < messageBits.length; col++) {
           const pixelIndex = rowStart + col;
+          // console.log(pixelIndex)
           stegoBytes[pixelIndex] = (stegoBytes[pixelIndex] & 0xFE) | messageBits[bitIndex];
           bitIndex++;
         }

@@ -1,0 +1,89 @@
+this file is written after confirming with the encryption and decryption flow process
+..... opting the firebase based image decoding approach ...
+FIRST THING 
+we store the image with a short key (message ID or UUID) and put the actual encrypted data in Firebase.
+
+with some example structure
+//
+    firebasePath -> id ->
+    {
+        id: "msg123", //same as above id
+        salt: "...", 
+        iv: "...",
+        cipherText: "...",
+        checksum: "...", or some hash (detailed below)
+        createdAt: timestamp,
+        // and additonal things for future embeddings
+        like 
+        // accessType -> count, time, lifetime etc
+    }
+//
+
+we only embed the image with the short key(firebase id) and channel thorugh then at receiver end we extract the id get the firebase object use the USER PASSWORD to decrypt the message
+// after get we check the parameters to enbale/disable decode followed by decryption
+**/*** for auto expiry we should consider things like netlify serverless funcs for auto deleting firebase id objects after specfied time  **/***
+......................
+
+SECOND THING
+only proceed to decode when the image integirty is verified meaning check the image whether it is altered or not 
+{
+    If someone changes even a single byte of the image (especially outside LSB bits), our app should detect that and refuse to decode.
+}
+
+//most secure way
+During Encoding:
+Before embedding the message ID, take a hash (e.g. SHA-256) of:
+The image pixels (excluding the LSB bits we plan to overwrite)
+
+Store that hash alongside the message ID in Firebase <<-- (or encode a short version in the image too)
+>>> 
+const cleanImageData = getNonLSBBits(imageData)
+const imageHash = await sha256(cleanImageData)
+
+await push(ref(db, 'stegMessages'), {
+  messageId,
+  imageHash, // stored on server for later comparison
+  ...
+})
+<<<<
+during decoding
+Load the image and recompute its non-LSB hash:
+>>>
+const currentImageHash = await sha256(getNonLSBBits(imageData))
+<<<
+Fetch the original imageHash from Firebase using the message ID
+Compare hashes:
+>>>>
+if (currentImageHash !== imageHashFromFirebase) {
+  throw new Error("Image integrity check failed. Possibly altered or corrupted.")
+}
+<<<<
+
+on encoding side:
+User enters message + password
+Generate salt + iv, encrypt with AES-GCM
+Push {salt, iv, cipherText, imageHash, expiresIn, maxDecodes} to Firebase
+Get the Firebase messageId (i.e., push key)
+Compute the non-LSB image hash
+Save the hash in Firebase (or optionally embed)
+LSB-embed the messageId into the BMP image
+Offer download of stego image
+if ? encoding fails delete db write for that id else : done
+also while export as zip for trnafer through comprression channels 
+
+on decoding side:
+User uploads a BMP stego image
+Extract embedded messageId from LSB
+Compute non-LSB hash and fetch imageHash from Firebase
+Compare hashes:
+If match → proceed
+If mismatch → abort
+Fetch {salt, iv, cipherText, decodeCount, ...} from Firebase
+Check: ofr optional decode count etc
+Prompt user for password
+Derive key from password + salt, decrypt using AES-GCM + iv
+Show plaintext
+if ? Increment deco deCount in Firebase
+...............
+ // provide the  image(any type) format to bmp convertor encoding
+

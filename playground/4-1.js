@@ -2,7 +2,7 @@
  * the present bmp image encoder decoder has some limitations 
  * the issues were 
  * 1. ROW PADDING
- * each row in BMP ust be multiple of 4bytes
+ * each row in BMP should be multiple of 4bytes
  * if(width*3)%4 != 0 BMP adds extra bytes (padding) at end of each row
  * if we dont skip those decoder will read garbage values
  * 
