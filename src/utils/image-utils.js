@@ -96,25 +96,28 @@ export const getImageDataFromFile = (file)=>{
  * @returns stegoBytes
  */
 
-export const encodeMessage=(imageData,message)=>{
+export const encodeMessage=(imageData,message,type='plain')=>{
   const {originalBytes,width,height,dataOffset}=imageData;
   const messageBits=[]
-  for (let i = 0; i < message.length; i++) {
-    const charCode = message.charCodeAt(i);
+  let finalMessage = message;
+  if(type==='encrypted') finalMessage+="||END||"
+  else finalMessage+="\0";
+  for (let i = 0; i < finalMessage.length; i++) {
+    const charCode = finalMessage.charCodeAt(i);
     for (let b = 7; b >= 0; b--) {
       messageBits.push((charCode >> b) & 1);
     }
   }
-  messageBits.push(...Array(8).fill(0)) // end marker
   const stegoBytes = encodeMessageWithPadding(originalBytes,width,height,messageBits,dataOffset);
   if(!stegoBytes){
     alert("Message is too long for this image.");
-    return;
+    return null;
   }
   return stegoBytes;
 }
 
 /**
+ * @function encodeMessageWithPadding
  * @param {*} bytes 
  * @param {*} width 
  * @param {*} height 
@@ -148,6 +151,11 @@ export const encodeMessageWithPadding=(bytes,width,height,messageBits,dataOffset
   return bitIndex >= messageBits.length ? stegoBytes : null;
 }
 
+/**
+ * @function decodeMessage
+ * @param {*} file 
+ * @returns decodedMessage
+ */
 export const decodeMessage=async(file)=>{
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -170,6 +178,14 @@ export const decodeMessage=async(file)=>{
   });
 }
 
+/**
+ * @function decodeMessageWithPadding
+ * @param {*} bytes 
+ * @param {*} width 
+ * @param {*} height 
+ * @param {*} dataOffset 
+ * @returns decodedMessage to utility function
+ */
 export const decodeMessageWithPadding=(bytes,width,height,dataOffset)=>{
   const rowSize = width * 3;
   const padding = (4 - (rowSize % 4)) % 4;
@@ -190,4 +206,28 @@ export const decodeMessageWithPadding=(bytes,width,height,dataOffset)=>{
     chars.push(String.fromCharCode(byte));
   }
   return chars.join("");
+}
+
+/**
+ * @function handleImageDataExtraction
+ * @param {*} file 
+ * @returns {bytes,width,height,dataOffset}
+ */
+export async function handleImageDataExtraction(file){
+  const isBmp = file.name.toLowerCase().endsWith('.bmp');
+  if(isBmp){
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer)
+    const meta = extractBmpMeta(uint8Array);
+    if(meta.bitDepth!==24 || meta.compression!==0){
+        alert("Only 24-bit uncompressed BMP files are supported.");
+        return null;
+      }
+      return {bytes:uint8Array,width:meta.width,height:meta.height,dataOffset:meta.dataOffset}
+  }else{
+    const imageData = await getImageDataFromFile(file);
+    const bmpBytes = convert24BitBMP(imageData);
+    const meta = extractBmpMeta(bmpBytes);
+    return {bytes:bmpBytes,width:meta.width,height:meta.height,dataOffset:meta.dataOffset}
+  }
 }

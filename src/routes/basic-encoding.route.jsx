@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { convert24BitBMP,extractBmpMeta,getImageDataFromFile,encodeMessage } from "../utils/image-utils";
+import {encodeMessage,handleImageDataExtraction } from "../utils/image-utils";
 import { exportStegoBmpAsZip } from "../utils/helpers";
 
 const BasicEncoding = () => {
@@ -12,22 +12,8 @@ const BasicEncoding = () => {
       setImageData(null)
       const file = e.target.files[0];
       if(!file) return
-      const isBmp = file.name.toLowerCase().endsWith('.bmp');
-      if(isBmp){
-        const arrayBuffer = await file.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer)
-        const meta = extractBmpMeta(uint8Array);
-        if(meta.bitDepth!==24 || meta.compression!==0){
-          alert("Only 24-bit uncompressed BMP files are supported.");
-          return;
-        }
-        imageDataSetter(uint8Array,meta.width,meta.height,meta.dataOffset)
-      }else{
-        const imageData = await getImageDataFromFile(file);
-        const bmpBytes = convert24BitBMP(imageData);
-        const meta = extractBmpMeta(bmpBytes);
-        imageDataSetter(bmpBytes,meta.width,meta.height,meta.dataOffset)
-      }
+      const result = await handleImageDataExtraction(file);
+      imageDataSetter(result.bytes,result.width,result.height,result.dataOffset)
     }
     const handleButtonClick=async()=>{
       if(!message || !imageData) return

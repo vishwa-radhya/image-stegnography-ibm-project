@@ -27,15 +27,15 @@ const BasicDecoding = () => {
 
     return ( 
         <div className="border rounded p-4">
-                <h2 className="text-xl font-semibold">Plain Steganography Decode</h2> 
-                <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="block w-full"
-                 />
-                 <textarea readOnly placeholder="decoded message appears here" value={decodedMessage} className="w-full h-30 overflow-auto border rounded p-2" />
-                 <button className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50 cursor-pointer" disabled={!file} onClick={handleButtonClick}>Decode</button>
+            <h2 className="text-xl font-semibold">Plain Steganography Decode</h2> 
+            <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="block w-full"
+            />
+            <textarea readOnly placeholder="decoded message appears here" value={decodedMessage} className="w-full h-30 overflow-auto border rounded p-2" />
+            <button className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50 cursor-pointer" disabled={!file} onClick={handleButtonClick}>Decode</button>
         </div>
      );
 }
