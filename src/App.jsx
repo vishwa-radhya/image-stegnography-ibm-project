@@ -7,6 +7,7 @@ import BasicDecoding from './routes/basic-decoding.route'
 import EncryptedEncoding from './routes/encrypted-encoding.route'
 import EncryptedDecoding from './routes/encrypted-decoding.route'
 import StegnographyOptions from './routes/stegnography-options.route'
+import '@fontsource/michroma'
 
 function App() {
 

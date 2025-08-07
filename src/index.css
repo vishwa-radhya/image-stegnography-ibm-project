@@ -10,6 +10,17 @@
 body{
   background-color: black;
   color: white;
+  font-family: "Michroma",sans-serif;
+}
+.stego-nav-btn{
+  @apply hover:bg-[rgb(255,255,255)] hover:text-black px-[9px] py-[10px] rounded-[50%] hover:scale-118 transition duration-[250ms] ease-in-out;
+}
+.stego-nav-btn-hover{
+  @apply text-center   border-[0] bg-gradient-to-br from-[#181818] to-[#212121] text-white;
+}
+button{
+  cursor: pointer;
+  transition: .25s ease;
 }
 
 @theme inline {
