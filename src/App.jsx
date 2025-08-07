@@ -8,10 +8,12 @@ import EncryptedEncoding from './routes/encrypted-encoding.route'
 import EncryptedDecoding from './routes/encrypted-decoding.route'
 import StegnographyOptions from './routes/stegnography-options.route'
 import '@fontsource/michroma'
-
+import { Toaster } from "./components/ui/sonner"
+import { Fragment } from "react"
 function App() {
 
   return (
+    <Fragment>
     <Routes>
       <Route path="/" element={<Navbar/>}>
       <Route index element={<Home/>} />
@@ -23,6 +25,8 @@ function App() {
       <Route path="selection/stegnography-options" element={<StegnographyOptions/>} />
       </Route>
     </Routes>
+    <Toaster richColors position='top-center' />
+    </Fragment>
   )
 }
 

@@ -1,6 +1,6 @@
-import {Button} from '@/components/ui/button'
+import {Button} from '../components/ui/button'
 import { useNavigate } from 'react-router-dom';
-// import HeroImg from '../assets/hero-img-13.jpg';
+import HeroImg from '../assets/hero-img-13.jpg';
 const Home = () => {
     const navigateRouter = useNavigate();
     return ( 

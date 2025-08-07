@@ -223,11 +223,11 @@ export async function handleImageDataExtraction(file){
         alert("Only 24-bit uncompressed BMP files are supported.");
         return null;
       }
-      return {bytes:uint8Array,width:meta.width,height:meta.height,dataOffset:meta.dataOffset}
+      return {bytes:uint8Array,width:meta.width,height:meta.height,dataOffset:meta.dataOffset,isConverted:false}
   }else{
     const imageData = await getImageDataFromFile(file);
     const bmpBytes = convert24BitBMP(imageData);
     const meta = extractBmpMeta(bmpBytes);
-    return {bytes:bmpBytes,width:meta.width,height:meta.height,dataOffset:meta.dataOffset}
+    return {bytes:bmpBytes,width:meta.width,height:meta.height,dataOffset:meta.dataOffset,isConverted:true}
   }
 }

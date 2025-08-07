@@ -21,7 +21,7 @@ const Navbar = () => {
     }
     return ( 
         <Fragment>
-        <div className=" flex justify-center w-full pt-[10px] pb-[10px]">
+        <div className=" flex justify-center w-full mt-3 mb-3">
             <div
           className={`text-white shadow-[0px_4px_10px_rgba(0,0,0,0.4)] rounded-[30px]  cursor-pointer bg-gradient-to-br from-[#111111] to-[#3b3b3b] backdrop-blur-sm
           transition-all duration-500 ease-in-out flex items-center gap-4 relative
@@ -29,7 +29,7 @@ const Navbar = () => {
           `}
           onClick={() => setExpanded(true)}  
         >
-          {(!expanded && !subExpanded) && <span className="whitespace-nowrap mr-3.5 px-[10px] py-[10px] w-full text-center">STEGO</span>}
+          {(!expanded && !subExpanded) && <span className="whitespace-nowrap mr-3.5 px-[10px] py-[10px]  w-full text-center ml-3">STEGO</span>}
           {(expanded && !subExpanded) && (
             <div className="flex gap-3  w-full justify-center  h-full">
             <HoverCard>
@@ -74,7 +74,7 @@ const Navbar = () => {
           {(subExpanded && !expanded) && (
             <div className="flex gap-3 w-full justify-center h-full">
               {selectionArray.map((obj,index)=>{
-                return  <HoverCard>
+                return  <HoverCard key={`hover-card-nav-${index}`}>
                   <HoverCardTrigger asChild>
                     <span key={`subnav-${index}`} onClick={(e)=>handleSubnavButtonClick(e,obj)} className="stego-nav-btn">{obj.subTitle}</span>
                   </HoverCardTrigger>

@@ -44,3 +44,11 @@ import { ImageUp,ImageDown,CircleEllipsis } from "lucide-react";
         },
     ]
 export const selectionArraySliced = selectionArray.slice(0,5)
+
+export const basicEncodingSteps=[
+    { id: 0, title: "Upload Image", description: "Select an image file to hide your message" },
+    { id: 1, title: "Enter Message", description: "Type the secret message to embed" },
+    { id: 2, title: "Process Image", description: "Convert and prepare the image" },
+    { id: 3, title: "Encode Message", description: "Hide the message in the image" },
+    { id: 4, title: "Download Result", description: "Get your steganographic image" }
+]
