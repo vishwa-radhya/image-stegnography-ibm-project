@@ -30,47 +30,25 @@ const Navbar = () => {
           onClick={() => setExpanded(true)}  
         >
           {(!expanded && !subExpanded) && <span className="whitespace-nowrap mr-3.5 px-[10px] py-[10px]  w-full text-center ml-3">STEGO</span>}
-          {(expanded && !subExpanded) && (
-            <div className="flex gap-3  w-full justify-center  h-full">
-            <HoverCard>
-            <HoverCardTrigger asChild>
-              <span
-                className="stego-nav-btn" onClick={(e) => {
-                  e.stopPropagation();
-                  navigateRouter('/');}} > Ho </span>
-            </HoverCardTrigger>
-            <HoverCardContent className="stego-nav-btn-hover">Home</HoverCardContent>
-          </HoverCard>
-          <HoverCard>
-            <HoverCardTrigger asChild>
-                  <span className="stego-nav-btn" onClick={(e)=>{
-                e.stopPropagation()
-                setExpanded(false)
-                setSubExpanded(true)
-              }}>Op</span>
-            </HoverCardTrigger>
-            <HoverCardContent className="stego-nav-btn-hover">Options</HoverCardContent>
-          </HoverCard>
-              <HoverCard>
-                <HoverCardTrigger asChild>
-                  <span className="stego-nav-btn" onClick={(e)=>{
-                e.stopPropagation()
-                navigateRouter('/selections')
-              }}>So</span>
-                </HoverCardTrigger>
-            <HoverCardContent className="stego-nav-btn-hover">Select options</HoverCardContent>
-              </HoverCard>
-              <HoverCard>
-                <HoverCardTrigger asChild>
-                  <span className="stego-nav-btn" onClick={(e)=>{
-                e.stopPropagation()
-                setExpanded(false)
-              }}>Xx</span>
-                </HoverCardTrigger>
-            <HoverCardContent className="stego-nav-btn-hover">Close</HoverCardContent>
-              </HoverCard>
-            </div>
-          )}
+          {
+            (expanded && !subExpanded) && (
+              <div className="flex gap-3 w-full justify-center h-full">
+                {[
+                  {label:'Ho',tooltip:'Home',onClick:(e)=>{
+                    e.stopPropagation(); navigateRouter('/')
+                  }},{label:'Op',tooltip:'Options',onClick:(e)=>{
+                      e.stopPropagation(); setExpanded(false); setSubExpanded(true)}},{label:'So',tooltip:'Select options',onClick:(e)=>{e.stopPropagation();navigateRouter('/selections')}},{label:'Xx',tooltip:'Close',onClick:(e)=>{e.stopPropagation();setExpanded(false)}}
+                ].map(({label,tooltip,onClick})=>(
+                  <HoverCard key={`nav-${label}`}>
+                    <HoverCardTrigger asChild>
+                      <span className="stego-nav-btn" onClick={onClick}>{label}</span>
+                    </HoverCardTrigger>
+                    <HoverCardContent className='stego-nav-btn-hover'>{tooltip}</HoverCardContent>
+                  </HoverCard>
+                ))}
+              </div>
+            )
+          }
           {(subExpanded && !expanded) && (
             <div className="flex gap-3 w-full justify-center h-full">
               {selectionArray.map((obj,index)=>{

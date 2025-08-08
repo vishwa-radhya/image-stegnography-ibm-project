@@ -7,7 +7,7 @@
   @apply hover:bg-[rgb(255,255,255)] hover:text-black px-[9px] py-[10px] rounded-[50%] hover:scale-118 transition duration-[250ms] ease-in-out;
 }
 .stego-nav-btn-hover{
-  @apply text-center   border-[0] bg-gradient-to-br from-[#181818] to-[#212121] text-white;
+  @apply text-center   border-[0] bg-[linear-gradient(to_bottom_right,#2b2b2b,#060501,#2b2b2b)] text-white;
 }
 
 @theme inline {

@@ -52,3 +52,4 @@ export const basicEncodingSteps=[
     { id: 3, title: "Encode Message", description: "Hide the message in the image" },
     { id: 4, title: "Download Result", description: "Get your steganographic image" }
 ]
+export const basicDecodingSteps=[{ title: "Upload BMP Image", description: "Select a BMP file that may contain hidden message" },{ title: "Decode Message", description: "Extract the hidden message from the image" },{ title: "View Result", description: "Read the decoded secret message" }]

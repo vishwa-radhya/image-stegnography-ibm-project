@@ -18,7 +18,7 @@ const BasicEncoding = () => {
       setIsProcessing(true)
       try{
         const result = await handleImageDataExtraction(file);
-        setImageData(result);
+        setImageData({originalBytes:result.bytes,width:result.width,height:result.height,dataOffset:result.dataOffset});
         setCurrentStep(1);
       }catch(err){
         console.error('Error processing image:',err);
@@ -106,32 +106,47 @@ const BasicEncoding = () => {
           </p>
         </div>
         <div className="mb-8 sm:mb-8">
-          <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-4 mb-4">
-            {
-              basicEncodingSteps.map((step,index)=>{
-                const status = getStepStatus(index);
-                return(
-                  <div key={`step-ph-${index}`} className="flex items-center max-sm:gap-1">
-                    <div className={`
-                  flex items-center justify-center w-9 h-9 sm:w-[42px] sm:h-10 rounded-full border-2 transition-all duration-300 text-xs sm:text-sm
-                  ${
-                    status === "completed"
-                      ? "bg-green-500 border-green-500"
-                      : status === "active"
-                      ? "bg-blue-600 border-blue-500"
-                      : "bg-gray-700 border-gray-600"
-                  }
-              `}>
-                        {getStepIcon(index, status)}
-                    </div>
-                    {index < basicEncodingSteps.length - 1 && (
-                        <div className={`w-8 sm:w-13 h-0.5 mx-1 sm:mx-2 transition-all duration-300 ${status === "completed"
-                        ? "bg-green-500"
-                        : "bg-gray-600" }`} />
-                    )}
+        {/* Desktop Step Progress */}
+          <div className="hidden sm:flex items-center justify-center mb-4 space-x-8">
+            {basicEncodingSteps.map((step, index) => {
+              const status = getStepStatus(index);
+              return (
+                <div key={`step-ph-${index}`} className="flex items-center">
+                  <div className={`
+                    flex items-center justify-center w-9 h-9 sm:w-[42px] sm:h-10 rounded-full border-2 transition-all duration-300 text-xs sm:text-sm
+                    ${status === 'completed' ? 'bg-green-500 border-green-500' : 
+                      status === 'active' ? 'bg-blue-600 border-blue-500' : 
+                      'bg-gray-700 border-gray-600'}
+                  `}>
+                    {getStepIcon(index, status)}
                   </div>
-                )
+                  {index < basicEncodingSteps.length - 1 && (
+                    <div className={`
+                      w-16 lg:w-20 h-0.5 mx-4 transition-all duration-300
+                      ${status === 'completed' ? 'bg-green-500' : 'bg-gray-600'}
+                    `} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {/* Mobile Step Progress */}
+          <div className="sm:hidden flex justify-center mb-4">
+            <div className="flex items-center space-x-3">
+              {basicEncodingSteps.map((_, index) => {
+                const status = getStepStatus(index);
+                return (
+                  <div key={`mobile-step-${index}`} className={`
+                    w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all duration-300 text-xs
+                    ${status === 'completed' ? 'bg-green-500 border-green-500' : 
+                      status === 'active' ? 'bg-blue-600 border-blue-500' : 
+                      'bg-gray-700 border-gray-600'}
+                  `}>
+                    {getStepIcon(index, status)}
+                  </div>
+                );
               })}
+            </div>
           </div>
           <div className="text-center flex flex-col gap-1.5 sm:gap-2.5 pt-2 sm:pt-3.5 pb-3 sm:pb-5">
               <h3 className="text-base sm:text-lg">
