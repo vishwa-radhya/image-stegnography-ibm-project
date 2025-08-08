@@ -11,8 +11,8 @@ const Selections = () => {
     {selectionArraySliced.map((obj, index) => (
       <div
         key={`selection-tile-${index}`}
-        className="bg-black text-white px-[20px] py-[30px] cursor-pointer flex flex-col items-center gap-4 min-w-[200px] flex-1 rounded-[4px]"
-        style={{ backgroundImage: 'linear-gradient(to bottom right, #2b2b2b, #060501, #2b2b2b)' }}
+        className="bg-black text-white px-[20px] py-[30px] cursor-pointer flex flex-col items-center gap-4 min-w-[250px] flex-1 rounded-[4px] bg-[linear-gradient(to_bottom_right,#2b2b2b,#060501,#2b2b2b)]"
+        // style={{ backgroundImage: 'linear-gradient(to bottom right, #2b2b2b, #060501, #2b2b2b)' }}
         onClick={() => navigateRouter(obj.link)}
       >
         <obj.icon size={'45px'} color='#616a6f' />
