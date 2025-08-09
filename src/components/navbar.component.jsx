@@ -27,9 +27,10 @@ const Navbar = () => {
           transition-all duration-500 ease-in-out flex items-center gap-4 relative
           ${expanded ? 'w-[230px]' : 'w-[130px]'} ${subExpanded ? 'w-[350px]' : 'w-[130px]'}
           `}
-          onClick={() => setExpanded(true)}  
+            
         >
-          {(!expanded && !subExpanded) && <span className="whitespace-nowrap mr-3.5 px-[10px] py-[10px]  w-full text-center ml-3">STEGO</span>}
+          {(!expanded && !subExpanded) && <span className="whitespace-nowrap mr-3.5 px-[10px] py-[10px]  w-full text-center ml-3" onClick={() => setExpanded(true)}>STEGO</span>}
+          {(expanded && subExpanded) && <span className="whitespace-nowrap mr-3.5 px-[10px] py-[10px]  w-full text-center ml-3" onClick={() => setExpanded(true)}>STEGO</span>}
           {
             (expanded && !subExpanded) && (
               <div className="flex gap-3 w-full justify-center h-full">
