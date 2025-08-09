@@ -3,68 +3,157 @@ import { encodeMessage, handleImageDataExtraction } from "../utils/image-utils";
 import { encryptWithWorker,hashWithWorker } from "../utils/crypto-utils";
 import { realtimeDb } from "../utils/firebase";
 import { push,ref, update } from "firebase/database";
-import { exportStegoBmpAsZip } from "../utils/helpers";
-
+import { exportStegoBmpAsZip,includeDelay } from "../utils/helpers";
+import { toast } from "sonner";
+import StegnographyWizardHeader from "../components/stegnography-wizard-header.component";
+import { encryptedEncodingSteps } from "../utils/application-data";
+import DesktopStepProgress from "../components/desktop-step-progress.coponent";
+import MobileStepProgress from "../components/mobile-step-progress.component";
+import CurrentStepInfo from "../components/current-step-info.component";
+import EncodingStep0 from "../components/encoding-step-0.component";
+import EncryptedEncodingStep1 from "../components/encrypted-encoding-step-1.component";
+import EncryptedEncodingStep2 from "../components/encrypted-encoding-step-2.component";
+import EncryptedEncodingStep3 from "../components/encrypted-encoding-step-3.component";
+import EncryptedEncodingStep4 from "../components/encrypted-encoding-step-4.component";
+import EncryptedEncodingStep5 from "../components/encrypted-encoding-step-5.component";
 const EncryptedEncoding = () => {
     const [imageData,setImageData]=useState(null);
     const [requirements,setRequirements]=useState({message:'',password:''});
-    const [options,setOptions]=useState({expiryDate:'',expiryCount:'0'});
- 
-    const imageDataSetter=(originalBytes,width,height,dataOffset)=>setImageData({originalBytes:originalBytes,width:width,height:height,dataOffset:dataOffset})
-    const handleRequirementsChange=(e)=>setRequirements(prev=>({...prev,[e.target.name]:e.target.value}))
-    const handleOptionschange=(e)=>setOptions(prev=>({...prev,[e.target.name]:e.target.value})) 
-    const handlImageUpload=async(e)=>{
-        setImageData(null)
+    const [options,setOptions]=useState({expiryDate:'',expiryCount:0});
+    const [currentStep, setCurrentStep] = useState(0);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [uploadedFile, setUploadedFile] = useState(null);
+
+     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
-        if(!file) return
-        const result = await handleImageDataExtraction(file);
-        imageDataSetter(result.bytes,result.width,result.height,result.dataOffset)
+        if (!file) return;
+        setUploadedFile(file);
+        setIsProcessing(true);
+        try {
+            const result = await handleImageDataExtraction(file);
+            setImageData({
+                originalBytes: result.bytes,
+                width: result.width,
+                height: result.height,
+                dataOffset: result.dataOffset
+            });
+            setCurrentStep(1);
+            toast.success('Image loaded successfully');
+        } catch (err) {
+            console.error('Error processing image:', err);
+            toast.error('Error extracting image data');
+        }
+        setIsProcessing(false);
+    };
+    const handleRequirementsChange = (e) => {
+        setRequirements(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+    const handleOptionsChange = (e) => {
+        setOptions(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+    const handleSetExpiryCount=(val)=>{
+        let num = parseInt(val, 10);
+        if (isNaN(num)) {
+            setOptions(prev => ({ ...prev, expiryCount: 0 }));
+            return;
+        }
+        if (num < 0) num = 0;
+        if (num > 9999) num = 9999;
+        setOptions(prev => ({ ...prev, expiryCount: num }));
     }
-    const handleButtonClick=async()=>{
-        if (!requirements.message || !imageData || !requirements.password) return;
-        const { salt, iv, cipherText } = await encryptWithWorker(
-        requirements.message,requirements.password);
-        const uniqueId = await pushEncryptedData(salt,iv,cipherText,
-        options.expiryDate,options.expiryCount);
-        const stegoBytes = encodeMessage(imageData, uniqueId, 'encrypted');
-        if (!stegoBytes) return;
-        const {hash} = await hashWithWorker(stegoBytes);
-        const docRef = ref(realtimeDb, `stegMessages/${uniqueId}`);
-        await update(docRef, { stegoHash: hash });
-        await exportStegoBmpAsZip(stegoBytes,'hidden_message')
-        setOptions({expiryDate:'',expiryCount:'0'})
-        setRequirements({message:'',password:''})
-        setImageData(null)
-    }
-    async function pushEncryptedData(salt,iv,cipherText,expiryDate,expiryCount){
-        const docRef = await push(ref(realtimeDb,'stegMessages'),{
-            salt,iv,cipherText,expiryCount:expiryCount!=='0' ? expiryCount : 'none',expiryDate,createdAt:Date.now()
-        })
-        return docRef.key;
+    const handleMessageSubmit = async() => {
+        if (!requirements.message.trim()) {
+            toast.error('Please enter a message to encrypt');
+            return;
+        }
+        if (!requirements.password || requirements.password.length < 4) {
+            toast.error('Password must be at least 4 characters long');
+            return;
+        }
+        await includeDelay(2000)
+        setCurrentStep(2);
+        processEncryption();
+    };
+    const processEncryption = async () => {
+            if (!imageData || !requirements.message || !requirements.password) {
+                toast.error('Missing required data for encryption');
+                return;
+            }
+            setIsProcessing(true);
+            try {
+                toast.info('Encrypting your message...');
+                const { salt, iv, cipherText } = await encryptWithWorker(
+                    requirements.message,
+                    requirements.password
+                );
+                await includeDelay(2000)
+                setCurrentStep(3);
+                toast.info('Storing encrypted data securely...');
+                const uniqueId = await pushEncryptedData(salt, iv, cipherText, options.expiryDate, options.expiryCount);
+                const stegoBytes = encodeMessage(imageData, uniqueId, 'encrypted');
+                if (!stegoBytes) {
+                    throw new Error('Failed to embed encrypted data in image');
+                }
+                await includeDelay(2500)
+                setCurrentStep(4);
+                toast.info('Creating security verification...');
+                const { hash } = await hashWithWorker(stegoBytes);
+                const docRef = ref(realtimeDb, `stegMessages/${uniqueId}`);
+                await update(docRef, { stegoHash: hash });
+                await includeDelay(2500)
+                setCurrentStep(5);
+                await exportStegoBmpAsZip(stegoBytes, 'encrypted_hidden_message');
+                toast.success('Encrypted image ready for download!');
+                setIsProcessing(false);
+            } catch (error) {
+                console.error('Error during encryption process:', error);
+                toast.error('Encryption process failed. Please try again.');
+                setIsProcessing(false);
+            }
+        };
+        const pushEncryptedData = async (salt, iv, cipherText, expiryDate, expiryCount) => {
+            try {
+                const docRef = await push(ref(realtimeDb, 'stegMessages'), {
+                    salt,
+                    iv,
+                    cipherText,
+                    expiryCount: expiryCount !== 0 ? expiryCount : '',
+                    expiryDate: expiryDate || null,
+                    createdAt: Date.now(),
+                });
+                return docRef.key;
+            } catch (error) {
+                console.error('Error storing encrypted data:', error);
+                throw new Error('Failed to store encrypted data');
+            }
+        };
+    const resetWizard = () => {
+        setCurrentStep(0);
+        setImageData(null);
+        setRequirements({ message: '', password: '' });
+        setOptions({ expiryDate: '', expiryCount: 0 });
+        setUploadedFile(null);
+        toast.success('Wizard reset. Ready for new encryption.');
+    };
+    const resetOptions=()=>{
+        setOptions({expiryDate: '', expiryCount: 0})
     }
     return ( 
-        <div className="border rounded p-4 flex flex-col gap-2">
-            <h2 className="text-xl font-semibold"> Enc Steganography Encode</h2>
-            <input
-                type="file"
-                accept="image/*"
-                onChange={handlImageUpload}
-                className="block w-full"
-            />
-            <textarea
-                placeholder="Enter the message to embed"
-                className="w-full h-32 p-2 border rounded"
-                value={requirements.message}
-                onChange={handleRequirementsChange}
-                maxLength={ 700}
-                name="message"
-            />
-            <input placeholder="password" className="border rounded w-full" minLength={4} maxLength={40} onChange={handleRequirementsChange} value={requirements.password} name="password" />
-            <div className="border rounded p-4 flex gap-5">
-                <input type="date" className="border" name="expiryDate" onChange={handleOptionschange} value={options.expiryDate} /> 
-                <input type="text" className="border" name="expiryCount" placeholder="count" maxLength={5} onChange={handleOptionschange} value={options.expiryCount} /> 
+        <div className="flex flex-col mt-1 gap-6 sm:gap-8 lg:gap-10 rounded-lg p-4 sm:p-6 shadow-2xl border border-gray-600/30 ml-[10px] mr-[10px]" style={{backgroundImage:"linear-gradient(to bottom right, #2b2b2b, #060501, #2b2b2b)"}}>
+            <StegnographyWizardHeader heading={'Encrypted Steganography Wizard'} subHeading={'Encrypt and hide your secret message with advanced security features'} />
+            <div className="mb-8 sm:mb-8">
+                <DesktopStepProgress steps={encryptedEncodingSteps} currentStep={currentStep} isProcessing={isProcessing} />
+                <MobileStepProgress steps={encryptedEncodingSteps } currentStep={currentStep} isProcessing={isProcessing} />
+                <CurrentStepInfo steps={encryptedEncodingSteps} currentStep={currentStep} />
+                <div className="space-y-4 sm:space-y-6">
+                    {currentStep==0 && <EncodingStep0 handleImageUpload={handleImageUpload} isProcessing={isProcessing} isEncryptedType={true} />}
+                    {currentStep==1 && <EncryptedEncodingStep1 uploadedFile={uploadedFile} resetOptions={resetOptions} imageData={imageData} requirements={requirements} handleRequirementsChange={handleRequirementsChange} options={options} handleOptionsChange={handleOptionsChange} handleExpiryCount={handleSetExpiryCount} handleMessageSubmit={handleMessageSubmit} />}
+                    {currentStep==2 && <EncryptedEncodingStep2 isProcessing={isProcessing} />}
+                    {currentStep==3 && <EncryptedEncodingStep3 isProcessing={isProcessing} />}
+                    {currentStep==4 && <EncryptedEncodingStep4 isProcessing={isProcessing} />}
+                    {currentStep==5 && <EncryptedEncodingStep5 isProcessing={isProcessing} resetWizard={resetWizard} />}
+                </div>
             </div>
-            <button className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50" disabled={!imageData || !requirements.message || !requirements.password} onClick={handleButtonClick}>Encode</button>
         </div>
      );
 }

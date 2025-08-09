@@ -39,3 +39,4 @@ export const handleDecodedMessageCopy=(decodedMessage)=>{
             toast.error('No decoded message to copy')
         }
     }
+export const includeDelay = (ms) => new Promise(resolve => setTimeout(resolve, ms));

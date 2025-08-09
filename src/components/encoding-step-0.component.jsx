@@ -1,8 +1,8 @@
 
-const EncodingStep0 = ({handleImageUpload,isProcessing}) => {
+const EncodingStep0 = ({handleImageUpload,isProcessing,isEncryptedType=false}) => {
     return ( 
         <div className="space-y-4">
-            <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 sm:p-8 text-center hover:border-blue-500 transition-colors">
+            <div className={`border-2 border-dashed border-gray-600 rounded-lg p-6 sm:p-8 text-center ${!isEncryptedType ? "hover:border-blue-500" : "hover:border-purple-500"} transition-colors`}>
                 <input
                     type="file"
                     accept="image/*"
@@ -26,13 +26,19 @@ const EncodingStep0 = ({handleImageUpload,isProcessing}) => {
                 </svg>
                     <p className="text-gray-300 font-medium text-sm sm:text-base">Click to upload an image</p>
                     <p className="text-gray-500 text-xs sm:text-sm">Supports JPG, PNG, BMP, and other formats</p>
+                    {isEncryptedType && <div className="flex items-center gap-1 text-purple-400 text-xs mt-2">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                        Encrypted Mode
+                    </div>}
                 </label>
             </div>
             {isProcessing && (
                 <div className="text-center relative top-2 sm:top-4">
-                    <div className="inline-flex items-center gap-2 text-blue-400 text-xs sm:text-sm">
-                        <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-blue-400"></div>
-                        Analyzing image...
+                    <div className={`inline-flex items-center gap-2 ${!isEncryptedType ? "text-blue-400" : "text-purple-400"} text-xs sm:text-sm`}>
+                        <div className={`animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 ${!isEncryptedType ? "hover:border-blue-500" : "hover:border-purple-500"}`}></div>
+                        Analyzing image {isEncryptedType ? 'for encryption' : ''}...
                     </div>
                 </div>
             )}

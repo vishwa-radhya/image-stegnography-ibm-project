@@ -25,7 +25,7 @@ function App() {
       <Route path="selection/stegnography-options" element={<StegnographyOptions/>} />
       </Route>
     </Routes>
-    <Toaster richColors position='top-center' />
+    <Toaster richColors position='top-center' expand={true} />
     </Fragment>
   )
 }
