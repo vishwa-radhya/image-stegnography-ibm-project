@@ -13,8 +13,6 @@ import CurrentStepInfo from "../components/current-step-info.component";
 import EncodingStep0 from "../components/encoding-step-0.component";
 import EncryptedEncodingStep1 from "../components/encrypted-encoding-step-1.component";
 import EncryptedEncodingStep2 from "../components/encrypted-encoding-step-2.component";
-import EncryptedEncodingStep3 from "../components/encrypted-encoding-step-3.component";
-import EncryptedEncodingStep4 from "../components/encrypted-encoding-step-4.component";
 import EncryptedEncodingStep5 from "../components/encrypted-encoding-step-5.component";
 const EncryptedEncoding = () => {
     const [imageData,setImageData]=useState(null);
@@ -148,9 +146,9 @@ const EncryptedEncoding = () => {
                 <div className="space-y-4 sm:space-y-6">
                     {currentStep==0 && <EncodingStep0 handleImageUpload={handleImageUpload} isProcessing={isProcessing} isEncryptedType={true} />}
                     {currentStep==1 && <EncryptedEncodingStep1 uploadedFile={uploadedFile} resetOptions={resetOptions} imageData={imageData} requirements={requirements} handleRequirementsChange={handleRequirementsChange} options={options} handleOptionsChange={handleOptionsChange} handleExpiryCount={handleSetExpiryCount} handleMessageSubmit={handleMessageSubmit} />}
-                    {currentStep==2 && <EncryptedEncodingStep2 isProcessing={isProcessing} />}
-                    {currentStep==3 && <EncryptedEncodingStep3 isProcessing={isProcessing} />}
-                    {currentStep==4 && <EncryptedEncodingStep4 isProcessing={isProcessing} />}
+                    {currentStep==2 && <EncryptedEncodingStep2 isProcessing={isProcessing} currentStep={currentStep} />}
+                    {currentStep==3 && <EncryptedEncodingStep2 isProcessing={isProcessing} currentStep={currentStep} />}
+                    {currentStep==4 && <EncryptedEncodingStep2 isProcessing={isProcessing} currentStep={currentStep} />}
                     {currentStep==5 && <EncryptedEncodingStep5 isProcessing={isProcessing} resetWizard={resetWizard} />}
                 </div>
             </div>

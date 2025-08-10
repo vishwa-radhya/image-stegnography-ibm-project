@@ -11,7 +11,6 @@ import '@fontsource/michroma'
 import { Toaster } from "./components/ui/sonner"
 import { Fragment } from "react"
 function App() {
-
   return (
     <Fragment>
     <Routes>
