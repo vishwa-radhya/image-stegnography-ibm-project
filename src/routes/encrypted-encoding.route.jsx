@@ -52,12 +52,12 @@ const EncryptedEncoding = () => {
         setOptions(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
     const handleSetExpiryCount=(val)=>{
-        let num = parseInt(val, 10);
-        if (isNaN(num)) {
+        const cleanVal = val.replace(/[^0-9]/g, '');
+        if (cleanVal === '') {
             setOptions(prev => ({ ...prev, expiryCount: 0 }));
             return;
         }
-        if (num < 0) num = 0;
+        let num = parseInt(cleanVal, 10);
         if (num > 9999) num = 9999;
         setOptions(prev => ({ ...prev, expiryCount: num }));
     }
@@ -70,7 +70,7 @@ const EncryptedEncoding = () => {
             toast.error('Password must be at least 4 characters long');
             return;
         }
-        await includeDelay(2000)
+        await includeDelay(1000)
         setCurrentStep(2);
         processEncryption();
     };
@@ -117,7 +117,7 @@ const EncryptedEncoding = () => {
                     salt,
                     iv,
                     cipherText,
-                    expiryCount: expiryCount !== 0 ? expiryCount : '',
+                    expiryCount: expiryCount || null,
                     expiryDate: expiryDate || null,
                     createdAt: Date.now(),
                 });

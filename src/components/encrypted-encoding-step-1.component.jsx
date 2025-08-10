@@ -71,7 +71,7 @@ const EncryptedEncodingStep1 = ({uploadedFile,
                                 <div>
                                     <label className="block text-xs font-medium text-gray-400 mb-1">Access Limit</label>
                                     <input
-                                        type="number"
+                                        type="text"
                                         placeholder="Max decryptions (0 = unlimited)"
                                         className="w-full p-3 bg-gray-700/50 border border-gray-600 rounded text-gray-100 text-sm
                                                   focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -82,9 +82,8 @@ const EncryptedEncodingStep1 = ({uploadedFile,
                                             e.preventDefault();
                                             }
                                         }}
-                                        value={options.expiryCount}
-                                        min="0"
-                                        max="9999"
+                                        value={options.expiryCount===0 ? '' :options.expiryCount }
+                                        maxLength={4}
                                     />
                                 </div>
                             </div>
