@@ -7,6 +7,7 @@ import BasicDecoding from './routes/basic-decoding.route'
 import EncryptedEncoding from './routes/encrypted-encoding.route'
 import EncryptedDecoding from './routes/encrypted-decoding.route'
 import StegnographyOptions from './routes/stegnography-options.route'
+import LSBEncoderAnimation from "./routes/test-anim"
 import '@fontsource/michroma'
 import { Toaster } from "./components/ui/sonner"
 import { Fragment } from "react"
@@ -22,6 +23,7 @@ function App() {
       <Route path="selection/encrypted-encoding" element={<EncryptedEncoding/>} />
       <Route path="selection/encrypted-decoding" element={<EncryptedDecoding/>} />
       <Route path="selection/stegnography-options" element={<StegnographyOptions/>} />
+      <Route path="test" element={<LSBEncoderAnimation/>} />
       </Route>
     </Routes>
     <Toaster richColors position='top-center' expand={true} />
