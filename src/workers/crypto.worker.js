@@ -49,7 +49,7 @@ self.onmessage = async (e) => {
     }catch(e){
       self.postMessage({
         requestId,
-        error:e.message
+        error:'error decrypting message (wrong password)'
       })
     }
   }

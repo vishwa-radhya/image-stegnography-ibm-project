@@ -84,7 +84,7 @@ const EncryptedEncoding = () => {
                     requirements.message,
                     requirements.password
                 );
-                await includeDelay(2000)
+                await includeDelay(5000)
                 setCurrentStep(3);
                 toast.info('Storing encrypted data securely...');
                 const uniqueId = await pushEncryptedData(salt, iv, cipherText, options.expiryDate, options.expiryCount);
@@ -92,13 +92,13 @@ const EncryptedEncoding = () => {
                 if (!stegoBytes) {
                     throw new Error('Failed to embed encrypted data in image');
                 }
-                await includeDelay(2500)
+                await includeDelay(5000)
                 setCurrentStep(4);
                 toast.info('Creating security verification...');
                 const { hash } = await hashWithWorker(stegoBytes);
                 const docRef = ref(realtimeDb, `stegMessages/${uniqueId}`);
                 await update(docRef, { stegoHash: hash });
-                await includeDelay(2500)
+                await includeDelay(4500)
                 setCurrentStep(5);
                 await exportStegoBmpAsZip(stegoBytes, 'encrypted_hidden_message');
                 toast.success('Encrypted image ready for download!');

@@ -82,7 +82,7 @@ const EncryptedDecoding = () => {
         if (hash !== stegoHash) {
             toast.error('Image has been tampered with. Cannot perform decryption.');
             setDecodedMessage("(Error: Image integrity check failed)");
-            await includeDelay(2000);
+            await includeDelay(3000);
             setCurrentStep(3);
             return;
         }
@@ -90,14 +90,14 @@ const EncryptedDecoding = () => {
         try {
             const plainText = await decryptWithWorker(cipherText, salt, iv, password);
             setDecodedMessage(plainText);
-            await includeDelay(2000);
+            await includeDelay(3000);
             setCurrentStep(3);
             toast.success('Message decrypted successfully!');
             await updateExpiryCount(docId, parseInt(expiryCount,10));
         } catch (e) {
             console.error(e);
             setDecodedMessage("(Error: Failed to decrypt message - incorrect password)");
-            await includeDelay(2000);
+            await includeDelay(3000);
             setCurrentStep(3);
             toast.error('Failed to decrypt message. Please check your password.');
         }

@@ -28,7 +28,7 @@ const BasicEncoding = () => {
       try{
         const result = await handleImageDataExtraction(file);
         setImageData({originalBytes:result.bytes,width:result.width,height:result.height,dataOffset:result.dataOffset});
-        await includeDelay(1500)
+        await includeDelay(2500)
         setCurrentStep(1);
       }catch(err){
         console.error('Error processing image:',err);
@@ -41,7 +41,7 @@ const BasicEncoding = () => {
           toast.info('Please enter the message to hide')
           return
         }
-        await includeDelay(1500)
+        await includeDelay(500)
         setCurrentStep(2);
         processImage();
     };
@@ -56,8 +56,8 @@ const BasicEncoding = () => {
       }else{
         toast.info('No image conversion done')
       }
+      await includeDelay(3500)
       setCurrentStep(3)
-      await includeDelay(500)
       encodeAndFinalize()
       setIsProcessing(false)
     }
@@ -69,7 +69,7 @@ const BasicEncoding = () => {
         setIsProcessing(true);
         try{
           const stegoBytes = encodeMessage(imageData,message);
-          await includeDelay(2600)
+          await includeDelay(5000)
           setCurrentStep(4);
             await exportStegoBmpAsZip(stegoBytes,'hidden_message');
             setIsProcessing(false);

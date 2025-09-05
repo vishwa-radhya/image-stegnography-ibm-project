@@ -40,7 +40,7 @@ const BasicDecoding = () => {
             const message = await decodeMessage(file);
             if (message) {
                 setDecodedMessage(message);
-                await includeDelay(2000)
+                await includeDelay(2500)
                 setCurrentStep(2);
                 toast.success('Message decoded successfully!');
             } else {

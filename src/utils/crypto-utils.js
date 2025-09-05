@@ -35,7 +35,11 @@ export function decryptWithWorker(cipherText, salt, iv, password) {
     const requestId = Date.now() + Math.random();
     worker.onmessage = (e) => {
       if (e.data.requestId === requestId) {
-        resolve(e.data.plainText);
+        if(e.data.error){
+          reject(new Error(e.data.error));
+        }else{
+          resolve(e.data.plainText);
+        }
         worker.terminate();
       }
     };
