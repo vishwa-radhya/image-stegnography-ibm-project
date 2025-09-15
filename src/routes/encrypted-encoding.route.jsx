@@ -88,7 +88,7 @@ const EncryptedEncoding = () => {
                 setCurrentStep(3);
                 toast.info('Storing encrypted data securely...');
                 const uniqueId = await pushEncryptedData(salt, iv, cipherText, options.expiryDate, options.expiryCount);
-                const stegoBytes = encodeMessage(imageData, uniqueId, 'encrypted');
+                const stegoBytes = encodeMessage(imageData, uniqueId, 'encryptedlsb');
                 if (!stegoBytes) {
                     throw new Error('Failed to embed encrypted data in image');
                 }

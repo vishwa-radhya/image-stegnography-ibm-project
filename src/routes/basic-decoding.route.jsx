@@ -37,7 +37,7 @@ const BasicDecoding = () => {
         if (!file) return;
         setIsDecoding(true);
         try {
-            const message = await decodeMessage(file);
+            const message = await decodeMessage(file,'plain');
             if (message) {
                 setDecodedMessage(message);
                 await includeDelay(2500)
@@ -52,7 +52,13 @@ const BasicDecoding = () => {
         } catch (e) {
             console.error(e);
             setDecodedMessage("(Error: Failed to decode message)");
-            toast.error('Failed to decode message. Make sure it\'s a valid uncompressed 24-bit BMP file.');
+            if(e.message ==="Incompitable decoder selection error"){
+                toast.error('Failed to decode message. Make sure the image is encoded with plain encoding.');
+            }else{
+                toast.error('Failed to decode message. Make sure it\'s a valid uncompressed 24-bit BMP file.');
+            }
+            setDecodedMessage("(unable to decode the hidden message)");
+            setCurrentStep(2)
         }
         setIsDecoding(false);
     };

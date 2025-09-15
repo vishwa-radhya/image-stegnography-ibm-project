@@ -1,3 +1,10 @@
+const MARKERS = {
+  'plain': 'x0x',
+  'encryptedlsb': 'x1x',
+  'encryptedlcg': 'x2x',
+  'encryptedsha': 'x3x'
+};
+
 /**
  * @function encode24BitBMP // accepts any file type and converts to 24-bit bmp file
  * @param imageData //  {width,height,data} extracted  from image when drawn to canvas
@@ -12,7 +19,7 @@ export function convert24BitBMP(imageData) {
 
   const buffer = new Uint8Array(fileSize);
   const dv = new DataView(buffer.buffer);
-  // BMP Header
+  // BMP Header6
   dv.setUint8(0, "B".charCodeAt(0));
   dv.setUint8(1, "M".charCodeAt(0));
   dv.setUint32(2, fileSize, true);
@@ -99,9 +106,7 @@ export const getImageDataFromFile = (file)=>{
 export const encodeMessage=(imageData,message,type='plain')=>{
   const {originalBytes,width,height,dataOffset}=imageData;
   const messageBits=[]
-  let finalMessage = message;
-  if(type==='encrypted') finalMessage+="||END||"
-  else finalMessage+="\0";
+  let finalMessage=MARKERS[type]+message+(type==='plain' ? '\0' : '||END||');
   for (let i = 0; i < finalMessage.length; i++) {
     const charCode = finalMessage.charCodeAt(i);
     for (let b = 7; b >= 0; b--) {
@@ -154,9 +159,10 @@ export const encodeMessageWithPadding=(bytes,width,height,messageBits,dataOffset
 /**
  * @function decodeMessage
  * @param {*} file 
+ * @param {*} type
  * @returns decodedMessage
  */
-export const decodeMessage=async(file)=>{
+export const decodeMessage=async(file,type)=>{
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -167,7 +173,10 @@ export const decodeMessage=async(file)=>{
         const width = bytes[18] | (bytes[19] << 8) | (bytes[20] << 16) | (bytes[21] << 24);
         const height = bytes[22] | (bytes[23] << 8) | (bytes[24] << 16) | (bytes[25] << 24);
         const dataOffset = bytes[10] | (bytes[11] << 8) | (bytes[12] << 16) | (bytes[13] << 24);
-        const message = decodeMessageWithPadding(bytes, width, height, dataOffset);
+        const message = decodeMessageWithPadding(bytes, width, height, dataOffset,type);
+        if(message==="x-*incorrect:decoder:selection*-x"){
+          reject( new Error("Incompitable decoder selection error"))
+        }
         resolve(message);
       } catch (error) {
         reject("Failed to decode message: " + error.message);
@@ -184,14 +193,36 @@ export const decodeMessage=async(file)=>{
  * @param {*} width 
  * @param {*} height 
  * @param {*} dataOffset 
+ * @param {*} type
  * @returns decodedMessage to utility function
  */
-export const decodeMessageWithPadding=(bytes,width,height,dataOffset)=>{
+export const decodeMessageWithPadding=(bytes,width,height,dataOffset,type)=>{
   const rowSize = width * 3;
   const padding = (4 - (rowSize % 4)) % 4;
   const absHeight = Math.abs(height);
   const isTopDown = height < 0;
   let bits = [];
+   // ---- Step 1: Read the first 24 bits only ----
+  let checkBits = [];
+  for (let row = 0; row < absHeight && checkBits.length < 24; row++) {
+    const actualRow = isTopDown ? row : absHeight - 1 - row;
+    const rowStart = dataOffset + actualRow * (rowSize + padding);
+
+    for (let col = 0; col < rowSize && checkBits.length < 24; col++) {
+      checkBits.push(bytes[rowStart + col] & 1);
+    }
+  }
+  const checkBitChars = [];
+  for (let i = 0; i + 8 <= checkBits.length; i += 8) {
+    const byte = checkBits
+      .slice(i, i + 8)
+      .reduce((acc, b, j) => acc | (b << (7 - j)), 0);
+    checkBitChars.push(String.fromCharCode(byte));
+  }
+  const marker = checkBitChars.join("");
+  if((type==='plain' && marker.trim()!=='x0x') || (type==='encrypted' && marker.trim()==='x0x')){
+    return "x-*incorrect:decoder:selection*-x"
+  }
   for (let row = 0; row < absHeight; row++) {
     const actualRow = isTopDown ? row : absHeight - 1 - row;
     const rowStart = dataOffset + actualRow * (rowSize + padding);
@@ -205,7 +236,7 @@ export const decodeMessageWithPadding=(bytes,width,height,dataOffset)=>{
     if (byte === 0) break;
     chars.push(String.fromCharCode(byte));
   }
-  return chars.join("");
+  return chars.slice(3).join("");
 }
 
 /**

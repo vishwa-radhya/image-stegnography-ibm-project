@@ -1,0 +1,98 @@
+<!--
+    Testing random generater (PRNG logic) uses LCG(Linear Congruential Generator) (Park–Miller minimal standard)
+    Fast, lightweight — almost zero performance cost, simple to implement.
+    Deterministic with the same password.
+    Predictable: If an attacker figures out a few positions, they can regenerate the sequence.
+    Not resistant to brute force on weak passwords.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PRNG Position Generator Test</title>
+</head>
+<body>
+  <h2>PRNG Random Position Generator</h2>
+  <input type="file" id="fileInput" accept=".bmp">
+  <br><br>
+  <input type="text" id="passwordInput" placeholder="Enter password">
+  <br><br>
+  <button id="generateBtn">Generate Positions</button>
+  <pre id="output"></pre>
+
+  <script>
+    async function extractBmpMeta(bytes) {
+      const width = bytes[18] | (bytes[19] << 8) | (bytes[20] << 16) | (bytes[21] << 24);
+      const height = bytes[22] | (bytes[23] << 8) | (bytes[24] << 16) | (bytes[25] << 24);
+      const dataOffset = bytes[10] | (bytes[11] << 8) | (bytes[12] << 16) | (bytes[13] << 24);
+      const bitDepth = bytes[28] | (bytes[29] << 8);
+      return { width, height, dataOffset, bitDepth };
+    }
+
+    async function generatePseudoRandomPositions(password, messageLength, width, height) {
+      const totalBits = width * Math.abs(height) * 3;
+      if (messageLength > totalBits) {
+        throw new Error("Message too long for given image capacity.");
+      }
+
+      // derive seed from password
+      const enc = new TextEncoder();
+      const hashBuffer = await crypto.subtle.digest("SHA-256", enc.encode(password));
+      const hashArray = new Uint32Array(hashBuffer);
+      let seed = hashArray[0];
+
+      // LCG params
+      const m = 2 ** 31 - 1;
+      const a = 48271;
+      const c = 0;
+      let state = seed % m;
+
+      function nextRand() {
+        state = (a * state + c) % m;
+        return state / m;
+      }
+
+      const positions = new Set();
+      while (positions.size < messageLength) {
+        const pos = Math.floor(nextRand() * totalBits);
+        positions.add(pos);
+      }
+
+      return Array.from(positions);
+    }
+
+    document.getElementById('generateBtn').addEventListener('click', async () => {
+      const file = document.getElementById('fileInput').files[0];
+      const password = document.getElementById('passwordInput').value.trim();
+      const output = document.getElementById('output');
+      output.textContent = "Processing...\n";
+
+      if (!file) {
+        output.textContent = "Please select a BMP file.";
+        return;
+      }
+      if (!password) {
+        output.textContent = "Please enter a password.";
+        return;
+      }
+
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const meta = await extractBmpMeta(uint8Array);
+
+      if (meta.bitDepth !== 24) {
+        output.textContent = "Only 24-bit BMP files supported.";
+        return;
+      }
+
+      try {
+        const positions = await generatePseudoRandomPositions(password, 100, meta.width, meta.height);
+        output.textContent = `Generated ${positions.length} positions (showing first 50):\n\n` +
+                             positions.slice(0, 50).join(", ");
+      } catch (err) {
+        output.textContent = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

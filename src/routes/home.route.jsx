@@ -6,8 +6,8 @@ const Home = () => {
     return ( 
         <div className="relative h-[90vh] flex justify-around flex-col items-center overflow-hidden">
             {/* <img src={HeroImg} alt="Hero" className="absolute inset-0 w-full h-full object-contain blur-[0px] -z-10"/> */}
-        <h1 className="text-[100px] tracking-[30px] text-white">STEGO</h1>
-        <Button variant="secondary" className="text-[20px]" onClick={()=>navigateRouter('/selections')}>
+        <h1 className="text-[40px] sm:text-[100px] tracking-[10px] sm:tracking-[30px] text-white flex w-full justify-center">STEGO</h1>
+        <Button variant="secondary" className="text-[20px] mt-3" onClick={()=>navigateRouter('/selections')}>
             Get started
         </Button>
         </div>

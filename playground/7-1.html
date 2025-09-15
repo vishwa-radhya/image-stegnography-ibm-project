@@ -1,0 +1,89 @@
+<!-- 
+    (SHA-256 stream PRNG)(SHA-256 Stream Counter) to generate random unique pos from BMP image
+    Cryptographically stronger — each password → unique, unpredictable position sequence.
+    Stable and deterministic (same password always gives same sequence).
+    Resistant to reverse-engineering; attacker can’t predict sequence without the password.
+    Slightly heavier than LCG (but browsers/Node handle SHA-256 easily).
+    More code complexity.
+-->
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SHA-256 PRNG Random Positions</title>
+</head>
+<body>
+  <h2>SHA-256 PRNG Random Positions from BMP</h2>
+  <input type="file" id="fileInput" accept=".bmp" />
+  <input type="text" id="password" placeholder="Enter password" />
+  <input type="number" id="messageBits" placeholder="Message length (bits)" />
+  <button id="generateBtn">Generate Positions</button>
+  <pre id="output"></pre>
+
+  <script>
+    async function sha256(message) {
+      const msgBuffer = new TextEncoder().encode(message);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+      return new Uint8Array(hashBuffer);
+    }
+
+    async function* sha256Stream(password) {
+      let counter = 0;
+      while (true) {
+        const data = password + ":" + counter++;
+        const hash = await sha256(data);
+        yield hash;
+      }
+    }
+
+    async function generateRandomPositions(password, totalCapacity, messageBits) {
+      const positions = new Set();
+      const stream = sha256Stream(password);
+
+      while (positions.size < messageBits) {
+        const hash = (await stream.next()).value;
+        for (let i = 0; i < hash.length; i += 4) {
+          if (positions.size >= messageBits) break;
+          const num = (hash[i] << 24) | (hash[i+1] << 16) | (hash[i+2] << 8) | hash[i+3];
+          const pos = Math.abs(num) % totalCapacity;
+          positions.add(pos);
+        }
+      }
+
+      return Array.from(positions);
+    }
+
+    document.getElementById("generateBtn").addEventListener("click", async () => {
+      const file = document.getElementById("fileInput").files[0];
+      const password = document.getElementById("password").value;
+      const messageBits = parseInt(document.getElementById("messageBits").value, 10);
+      if (!file || !password || !messageBits) {
+        alert("Please select BMP, enter password and message length.");
+        return;
+      }
+
+      const arrayBuffer = await file.arrayBuffer();
+      const bmp = new DataView(arrayBuffer);
+
+      const width = bmp.getInt32(18, true);
+      const height = bmp.getInt32(22, true);
+      const bitCount = bmp.getUint16(28, true);
+      if (bitCount !== 24) {
+        alert("Only 24-bit BMP supported.");
+        return;
+      }
+
+      const rowSize = Math.floor((bitCount * width + 31) / 32) * 4;
+      const dataOffset = bmp.getUint32(10, true);
+      const absHeight = Math.abs(height);
+      const pixelArraySize = rowSize * absHeight;
+      const totalCapacity = pixelArraySize; // byte-level capacity for embedding
+
+      const positions = await generateRandomPositions(password, totalCapacity, messageBits);
+
+      document.getElementById("output").textContent =
+        "Generated " + positions.length + " positions:\n" + positions.slice(0, 200).join(", ") + " ...";
+    });
+  </script>
+</body>
+</html>
