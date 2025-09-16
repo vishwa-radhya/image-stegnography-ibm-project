@@ -1,12 +1,13 @@
 import { Button } from "./ui/button";
 import ImageMetaView from "./image-meta-view.component";
+import { Select,SelectContent,SelectItem,SelectTrigger,SelectValue } from "./ui/select";
 const EncryptedEncodingStep1 = ({uploadedFile, 
     imageData, 
     requirements, 
     handleRequirementsChange, 
     options, 
     handleOptionsChange,handleExpiryCount, resetOptions,
-    handleMessageSubmit}) => {
+    handleMessageSubmit,encodingType,setEncodingType}) => {
         const isPasswordValid = requirements.password.length >= 4 && requirements.password.length <= 40;
             const isMessageValid = requirements.message.trim().length > 0;
             const isFormValid = isPasswordValid && isMessageValid;
@@ -50,6 +51,19 @@ const EncryptedEncodingStep1 = ({uploadedFile,
                                 Password length: {requirements.password.length}/40 {isPasswordValid ? '✓' : ''}
                             </span>
                         </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-4">Encoding Method</label>
+                        <Select onValueChange={e=>setEncodingType(e)} value={encodingType}>
+                            <SelectTrigger>
+                                <SelectValue placeholder='select encoding method' />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value='encryptedlsb'>LSB Sequential (low)</SelectItem>
+                                <SelectItem value='encryptedlcg'>LCG-based PRNG (medium)</SelectItem>
+                                <SelectItem value='encryptedsha'>SHA-256 Stream PRNG (high)</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-300">Security Options (Optional)</label>

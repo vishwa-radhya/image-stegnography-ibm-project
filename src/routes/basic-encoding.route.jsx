@@ -68,7 +68,7 @@ const BasicEncoding = () => {
       }
         setIsProcessing(true);
         try{
-          const stegoBytes = encodeMessage(imageData,message);
+          const stegoBytes = encodeMessage(imageData,message,'plain');
           await includeDelay(5000)
           setCurrentStep(4);
             await exportStegoBmpAsZip(stegoBytes,'hidden_message');

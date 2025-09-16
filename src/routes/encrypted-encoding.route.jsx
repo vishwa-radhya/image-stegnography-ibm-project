@@ -18,10 +18,11 @@ const EncryptedEncoding = () => {
     const [imageData,setImageData]=useState(null);
     const [requirements,setRequirements]=useState({message:'',password:''});
     const [options,setOptions]=useState({expiryDate:'',expiryCount:0});
+    const [encodingType,setEncodingType]=useState('encryptedlsb');
     const [currentStep, setCurrentStep] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const [uploadedFile, setUploadedFile] = useState(null);
-
+    
      const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -88,7 +89,7 @@ const EncryptedEncoding = () => {
                 setCurrentStep(3);
                 toast.info('Storing encrypted data securely...');
                 const uniqueId = await pushEncryptedData(salt, iv, cipherText, options.expiryDate, options.expiryCount);
-                const stegoBytes = encodeMessage(imageData, uniqueId, 'encryptedlsb');
+                const stegoBytes = await encodeMessage(imageData, uniqueId, (encodingType || 'encryptedlsb'),requirements.password);
                 if (!stegoBytes) {
                     throw new Error('Failed to embed encrypted data in image');
                 }
@@ -145,10 +146,8 @@ const EncryptedEncoding = () => {
                 <CurrentStepInfo steps={encryptedEncodingSteps} currentStep={currentStep} />
                 <div className="space-y-4 sm:space-y-6">
                     {currentStep==0 && <EncodingStep0 handleImageUpload={handleImageUpload} isProcessing={isProcessing} isEncryptedType={true} />}
-                    {currentStep==1 && <EncryptedEncodingStep1 uploadedFile={uploadedFile} resetOptions={resetOptions} imageData={imageData} requirements={requirements} handleRequirementsChange={handleRequirementsChange} options={options} handleOptionsChange={handleOptionsChange} handleExpiryCount={handleSetExpiryCount} handleMessageSubmit={handleMessageSubmit} />}
-                    {currentStep==2 && <EncryptedEncodingStep2 isProcessing={isProcessing} currentStep={currentStep} />}
-                    {currentStep==3 && <EncryptedEncodingStep2 isProcessing={isProcessing} currentStep={currentStep} />}
-                    {currentStep==4 && <EncryptedEncodingStep2 isProcessing={isProcessing} currentStep={currentStep} />}
+                    {currentStep==1 && <EncryptedEncodingStep1 uploadedFile={uploadedFile} resetOptions={resetOptions} imageData={imageData} requirements={requirements} handleRequirementsChange={handleRequirementsChange} options={options} handleOptionsChange={handleOptionsChange} handleExpiryCount={handleSetExpiryCount} handleMessageSubmit={handleMessageSubmit} encodingType={encodingType} setEncodingType={setEncodingType} />}
+                    {(currentStep>=2 && currentStep<=4) && <EncryptedEncodingStep2 isProcessing={isProcessing} currentStep={currentStep} encodingType={encodingType} />}
                     {currentStep==5 && <EncryptedEncodingStep5 isProcessing={isProcessing} resetWizard={resetWizard} />}
                 </div>
             </div>

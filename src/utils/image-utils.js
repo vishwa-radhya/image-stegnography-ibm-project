@@ -95,25 +95,86 @@ export const getImageDataFromFile = (file)=>{
       reader.readAsDataURL(file);
     })
   }
+  async function deriveSeedFromPassword(password){
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest("SHA-256",data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return (hashArray[0] << 24) | (hashArray[1] << 16) | (hashArray[2] << 8) | hashArray[3];
+  }
+  function createLCG(seed){
+    let state = seed >>> 0; // force unsigned 32-bit
+    const a = 1664525;
+    const c = 1013904223;
+    const m = 2 ** 32;
+    return ()=>{
+      state = (a*state+c) % m;
+      return state;
+    }
+  }
+  const encodeMessageLCG = (bytes,width,height,messageBits,dataOffset,seed)=>{
+    const availableBits = width*Math.abs(height)*3;
+    if(messageBits.length > availableBits-24){
+      return null;
+    }
+    const stegoBytes = new Uint8Array(bytes);
+    const BYTES_PER_PIXEL = 3;
+    const rowSize = width * BYTES_PER_PIXEL;
+    const padding = (4-(rowSize%4)) % 4;
+    const absHeight = Math.abs(height);
+    const totalDataBytes = absHeight * (rowSize + padding);
+    // --- step 1: sequentially write the marker (first 24 bits) ---
+    for(let i=0;i<24;i++){
+      const pos = dataOffset+i;
+      stegoBytes[pos] = (stegoBytes[pos] & 0xFE) | messageBits[i];
+    }
 
+    // create generator seeded by password
+    const rand = createLCG(seed);
+    let bitIndex=24; // start after marker
+    const used = new Set(); // avoid overwriting the same byte multiple times
+
+    while(bitIndex<messageBits.length){
+      let pos = rand() % totalDataBytes;
+      pos += dataOffset; // skip header
+      if(pos < dataOffset+24) continue; // skip reserved  marker bytes
+      if(used.has(pos)) continue;
+      stegoBytes[pos] = (stegoBytes[pos] & 0xFE) | messageBits[bitIndex];
+      used.add(pos);
+      bitIndex++;
+    }
+    return stegoBytes;
+  }
 /**
  * @function encodeMessage
  * @param  imageData 
  * @param  message 
+ * @param  encodingType
+ * @param  password
  * @returns stegoBytes
  */
 
-export const encodeMessage=(imageData,message,type='plain')=>{
+export const encodeMessage=async(imageData,message,encodingType='plain',password='')=>{
   const {originalBytes,width,height,dataOffset}=imageData;
   const messageBits=[]
-  let finalMessage=MARKERS[type]+message+(type==='plain' ? '\0' : '||END||');
+  let finalMessage=MARKERS[encodingType]+message+(encodingType==='plain' ? '\0' : '||END||');
   for (let i = 0; i < finalMessage.length; i++) {
     const charCode = finalMessage.charCodeAt(i);
     for (let b = 7; b >= 0; b--) {
       messageBits.push((charCode >> b) & 1);
     }
   }
-  const stegoBytes = encodeMessageWithPadding(originalBytes,width,height,messageBits,dataOffset);
+  let stegoBytes;
+  if(encodingType === 'encryptedlcg'){
+    if(!password.length){
+      alert('Password required');
+      return null;
+    }
+    const seed = await deriveSeedFromPassword(password);
+    stegoBytes = encodeMessageLCG(originalBytes,width,height,messageBits,dataOffset,seed);
+  }else{
+    stegoBytes = encodeMessageWithPadding(originalBytes,width,height,messageBits,dataOffset);
+  }
   if(!stegoBytes){
     alert("Message is too long for this image.");
     return null;
@@ -160,9 +221,10 @@ export const encodeMessageWithPadding=(bytes,width,height,messageBits,dataOffset
  * @function decodeMessage
  * @param {*} file 
  * @param {*} type
+ * @param {*} password
  * @returns decodedMessage
  */
-export const decodeMessage=async(file,type)=>{
+export const decodeMessage=async(file,type,password='')=>{
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -173,7 +235,7 @@ export const decodeMessage=async(file,type)=>{
         const width = bytes[18] | (bytes[19] << 8) | (bytes[20] << 16) | (bytes[21] << 24);
         const height = bytes[22] | (bytes[23] << 8) | (bytes[24] << 16) | (bytes[25] << 24);
         const dataOffset = bytes[10] | (bytes[11] << 8) | (bytes[12] << 16) | (bytes[13] << 24);
-        const message = decodeMessageWithPadding(bytes, width, height, dataOffset,type);
+        const message = decodeMessageWithPadding(bytes, width, height, dataOffset,type,password);
         if(message==="x-*incorrect:decoder:selection*-x"){
           reject( new Error("Incompitable decoder selection error"))
         }
@@ -187,6 +249,45 @@ export const decodeMessage=async(file,type)=>{
   });
 }
 
+const decodeMessageLCG=async(bytes,width,height,dataOffset,password)=>{
+  const rowSize = width * 3;
+  const padding = (4 - (rowSize % 4)) % 4;
+  const absHeight = Math.abs(height);
+
+  const seed = await deriveSeedFromPassword(password);
+  const rng = createLCG(seed);
+  const chars=[]
+  const used = new Set();
+  const totalDataBytes = absHeight*(rowSize+padding);
+  // helper to map next LCG value to pixel index
+  const getByteIndex=()=>{
+    let pos;
+    do{
+      pos = (rng()%totalDataBytes) + dataOffset;
+    }while(pos<dataOffset+24 || used.has(pos));
+    used.add(pos);
+    return pos;
+  }
+  let attempts=0;
+  const MAX_ATTEMPTS = 300;
+  while(true){
+    let byte =0;
+    for(let bit =0;bit<8;bit++){
+      if(attempts++ > MAX_ATTEMPTS){
+        console.error("Decoding LCG stuck, too many attempts")
+        return chars.join("");
+      }
+      const pos = getByteIndex();
+      byte = (byte << 1) | (bytes[pos] & 1);
+    }
+    chars.push(String.fromCharCode(byte));
+    if(chars.slice(-6).join("") === "||END||"){
+      break;
+    }
+  }
+  return chars.join("")
+}
+
 /**
  * @function decodeMessageWithPadding
  * @param {*} bytes 
@@ -194,9 +295,10 @@ export const decodeMessage=async(file,type)=>{
  * @param {*} height 
  * @param {*} dataOffset 
  * @param {*} type
+ * @param {*} password
  * @returns decodedMessage to utility function
  */
-export const decodeMessageWithPadding=(bytes,width,height,dataOffset,type)=>{
+export const decodeMessageWithPadding=async(bytes,width,height,dataOffset,type,password)=>{
   const rowSize = width * 3;
   const padding = (4 - (rowSize % 4)) % 4;
   const absHeight = Math.abs(height);
@@ -222,6 +324,12 @@ export const decodeMessageWithPadding=(bytes,width,height,dataOffset,type)=>{
   const marker = checkBitChars.join("");
   if((type==='plain' && marker.trim()!=='x0x') || (type==='encrypted' && marker.trim()==='x0x')){
     return "x-*incorrect:decoder:selection*-x"
+  }
+  if(marker.trim()==='x2x'){
+    if(!password.length){
+      return "x-*incorrect:decoder:selection*-x"
+    }
+    return await decodeMessageLCG(bytes,width,height,dataOffset,password);
   }
   for (let row = 0; row < absHeight; row++) {
     const actualRow = isTopDown ? row : absHeight - 1 - row;

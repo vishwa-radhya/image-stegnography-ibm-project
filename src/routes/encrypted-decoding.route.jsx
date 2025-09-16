@@ -13,8 +13,6 @@ import CurrentStepInfo from "../components/current-step-info.component";
 import DecodingStep0 from "../components/decoding-step-0.component";
 import EncryptedDecodingStep1 from "../components/encrypted-decoding-step-1.component";
 import EncryptedDecodingStep3 from "../components/encrypted-decoding-step-3.component";
-import FileMetaViewer from "../components/file-meta-viewer.component";
-import { Button } from "../components/ui/button";
 
 const EncryptedDecoding = () => {
     const [file,setFile]=useState(null);
@@ -114,7 +112,7 @@ const EncryptedDecoding = () => {
         setIsDecoding(true);
         setCurrentStep(2);
         try {
-            const message = await decodeMessage(file);
+            const message = await decodeMessage(file,'encrypted',password);
             const endMarker = '||END||';
             const endIndex = message.indexOf(endMarker);
             if (endIndex !== -1) {
@@ -143,7 +141,7 @@ const EncryptedDecoding = () => {
                 setDecodedMessage("(Error: Invalid steganographic image format)");
                 await includeDelay(2000);
                 setCurrentStep(3);
-                toast.error('END marker not found. Image might be corrupted or not a valid encrypted stego image.');
+                toast.error('END marker not found. Image might be corrupted or not a valid encrypted stego image or incorrect password.');
             }
         } catch (e) {
             console.error(e);

@@ -1,4 +1,4 @@
-const EncryptedEncodingStep2 = ({ isProcessing, currentStep }) => {
+const EncryptedEncodingStep2 = ({ isProcessing, currentStep,encodingType }) => {
     const getPathD = () => {
         switch (currentStep) {
             case 2:
@@ -11,6 +11,11 @@ const EncryptedEncodingStep2 = ({ isProcessing, currentStep }) => {
                 return "";
         }
     };
+    const getEncodingTypeMessage={
+        'encryptedlsb': 'LSB',
+        'encryptedlcg': 'LCG PRNG',
+        'encryptedsha': 'SHA PRNG'
+    }
     return (
         <div className="space-y-4">
             <div className="bg-gray-800/30 border border-gray-700/50 rounded-lg p-4 sm:p-6">
@@ -43,7 +48,7 @@ const EncryptedEncodingStep2 = ({ isProcessing, currentStep }) => {
                         {currentStep === 2 &&
                             "Your message is being encrypted using AES-256 encryption with a unique salt and initialization vector."}
                         {currentStep === 3 &&
-                            "The encrypted message ID is being embedded into the image using LSB steganography."}
+                            `The encrypted message ID is being embedded into the image using ${getEncodingTypeMessage[encodingType]} steganography.`}
                         {currentStep === 4 &&
                             "Creating security hash and storing encryption metadata securely."}
                     </p>
