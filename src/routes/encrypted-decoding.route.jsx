@@ -35,7 +35,7 @@ const EncryptedDecoding = () => {
         }
         setFile(file);
         setCurrentStep(1);
-        toast.info('BMP file loaded successfully. Enter password to decode.');
+        toast.info('BMP file loaded successfully. Enter the password to decode.');
     }
     const handlePasswordChange = (e) => {
         setPassword(e.target.value);
